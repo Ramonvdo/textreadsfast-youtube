@@ -57,8 +57,11 @@ pnpm run build
 ```
 
 Then open `chrome://extensions`, enable **Developer mode**, choose **Load
-unpacked**, and select the `dist/` folder. Chrome and Edge; Firefox is a later
-port, since its MV3 differs enough to be its own task.
+unpacked**, and select **`dist/`** — not the repository root. The root has no
+manifest precisely so it cannot be loaded by mistake; `dist/` is the extension.
+
+Chrome and Edge; Firefox is a later port, since its MV3 differs enough to be its
+own task.
 
 `pnpm run watch` rebuilds on change — reload the extension to pick changes up.
 

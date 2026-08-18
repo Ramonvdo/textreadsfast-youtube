@@ -39,6 +39,11 @@ pnpm run check          # all of the above
   not an error. Never treat `response.ok` as "we have captions" — judge on
   whether words came out.
 
+- **The manifest lives in `src/`, not the repository root.** Chrome will happily
+  try to load any folder containing a `manifest.json` and then fail on the
+  unbuilt paths inside it. Keeping the root manifest-free means the only
+  loadable folder is `dist/`, which is the one that works.
+
 - **Content scripts are bundled as IIFE, so no top-level `await`.** Init runs
   inside an async function called at the end of `src/content/index.ts`.
 

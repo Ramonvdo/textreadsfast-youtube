@@ -23,6 +23,7 @@ const entries = {
   content: "src/content/index.ts",
   inject: "src/page/inject.ts",
   options: "src/options/options.ts",
+  background: "src/background.ts",
 };
 
 /** The font stylesheet ships as-is, but its `url()`s must resolve against the
@@ -38,7 +39,7 @@ async function buildCss() {
 }
 
 async function copyStatic() {
-  await cp(resolve(root, "manifest.json"), resolve(outdir, "manifest.json"));
+  await cp(resolve(root, "src/manifest.json"), resolve(outdir, "manifest.json"));
   await cp(resolve(root, "public/fonts"), resolve(outdir, "fonts"), { recursive: true });
   await cp(resolve(root, "icons"), resolve(outdir, "icons"), { recursive: true });
   await cp(resolve(root, "src/options/options.html"), resolve(outdir, "options.html"));
