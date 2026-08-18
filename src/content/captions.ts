@@ -23,6 +23,22 @@ export interface CaptionTrack {
   label: string;
 }
 
+/**
+ * The video id a caption URL names, or null if it does not name one.
+ *
+ * Both the timedtext requests and the track `baseUrl`s carry `?v=`, which is the
+ * only reliable way to tell an ad's captions from the video's. Timing cannot: an
+ * ad and the video behind it play at the same page URL, and the player fetches
+ * the *main* video's track during a pre-roll as well as the ad's.
+ */
+export function captionVideoId(url: string): string | null {
+  try {
+    return new URL(url, "https://www.youtube.com").searchParams.get("v");
+  } catch {
+    return null;
+  }
+}
+
 /** Cues shorter than this are dropped: they are usually markup artefacts. */
 const MIN_WORD_MS = 40;
 

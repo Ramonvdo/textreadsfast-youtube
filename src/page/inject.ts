@@ -30,6 +30,21 @@ interface CaptionTrack {
   name?: { simpleText?: string };
 }
 
+/**
+ * During an ad, `getPlayerResponse()` describes the *ad*, not the video behind
+ * it. Publishing that would hand the content script the ad's caption track as if
+ * it were the video's — and the URL's video id is identical either side of an
+ * ad, so nothing downstream could tell the difference.
+ */
+function adShowing(): boolean {
+  const player = document.querySelector("#movie_player");
+  return (
+    player?.classList.contains("ad-showing") ||
+    player?.classList.contains("ad-interrupting") ||
+    false
+  );
+}
+
 function readTracks(): CaptionTrack[] {
   // The player response moves around between YouTube revisions, so try the
   // documented spot and then the player object, rather than assuming either.
@@ -62,6 +77,7 @@ function readTracks(): CaptionTrack[] {
 }
 
 function publishTracks(): void {
+  if (adShowing()) return;
   const tracks = readTracks();
   if (tracks.length > 0) {
     post(
@@ -159,4 +175,18 @@ publishTracks();
 document.addEventListener("yt-navigate-finish", () => {
   publishTracks();
   setTimeout(publishTracks, 600);
+});
+
+// The content script asks for this when an ad ends. No navigation event fires
+// then — the URL was the main video's throughout — so without being asked, the
+// player response we published during the ad would be the last word on it.
+window.addEventListener("message", (event: MessageEvent) => {
+  if (event.source !== window || event.origin !== window.location.origin)
+    return;
+  const data = event.data as { channel?: string; kind?: string };
+  if (data?.channel !== CHANNEL || data.kind !== "rescan") return;
+  publishTracks();
+  // The response can lag the ad ending by a moment.
+  setTimeout(publishTracks, 400);
+  setTimeout(publishTracks, 1200);
 });

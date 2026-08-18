@@ -64,6 +64,18 @@ pnpm run format         # prettier; `src/reader-core` is ignored on purpose
 - **Auto-captions repeat themselves.** Rolling `aAppend` events duplicate the
   previous line; taking both reads every word twice.
 
+- **An ad is not a navigation.** A pre-roll plays through the same `<video>`, in
+  the same `#movie_player`, at the same URL — the address bar holds the _main_
+  video's id throughout. So `yt-navigate-finish` never fires when the ad ends,
+  and a session built from the ad's captions has nothing to invalidate it: the
+  ad's transcript plays on over the real video until the page is reloaded. That
+  was a real bug. The only signal is the player's own `ad-showing` class.
+
+- **Timing does not tell you whose captions those are.** The player fetches the
+  main video's track during a pre-roll as well as the ad's, so "arrived while an
+  ad was showing" is not "belongs to the ad". Filter on the `v=` parameter in the
+  caption URL (`captionVideoId`), which names the video outright.
+
 - **A profile is not the whole of `Settings`.** `enabled` and `language` are
   excluded deliberately — they belong to the user, not to a reading style, and a
   profile switch that turned the reader off would read as a bug. `PROFILE_FIELDS`

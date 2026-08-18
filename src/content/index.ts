@@ -12,6 +12,7 @@
  */
 
 import {
+  captionVideoId,
   parseCaptions,
   pickTrack,
   withoutFillers,
@@ -20,6 +21,7 @@ import {
   type TimedWord,
 } from "./captions";
 import { ReaderOverlay } from "./overlay";
+import { adAction, isAdShowing } from "./ads";
 import {
   DEFAULTS,
   loadSettings,
@@ -47,6 +49,10 @@ let tracks: CaptionTrack[] = [];
 /** Caption payloads seen for the current video, newest last. */
 let pendingBodies: string[] = [];
 let currentVideoId: string | null = null;
+/** Whether an ad is on screen right now. See `ads.ts`. */
+let adShowing = false;
+let adWatcher: { player: HTMLElement; observer: MutationObserver } | null =
+  null;
 
 /* ── page bridge ────────────────────────────────────────────────────────── */
 
@@ -68,16 +74,48 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (data?.channel !== CHANNEL) return;
 
   if (data.kind === "tracks") {
-    tracks = data.payload as CaptionTrack[];
-    void start();
+    const mine = (data.payload as CaptionTrack[]).filter((t) =>
+      belongsToCurrentVideo(t.baseUrl),
+    );
+    // An empty result means every track belonged to something else — an ad.
+    // Keeping what we had beats replacing it with nothing.
+    if (mine.length > 0) {
+      tracks = mine;
+      void start();
+    }
   } else if (data.kind === "timedtext") {
-    const { body } = data.payload as { body: string };
-    if (body) {
+    const { url, body } = data.payload as { url?: string; body: string };
+    if (body && belongsToCurrentVideo(url)) {
       pendingBodies.push(body);
       void start();
     }
   }
 });
+
+/**
+ * Does this payload belong to the video in the address bar?
+ *
+ * A caption URL names its own video id, which settles a question the ad state
+ * alone cannot. The player fetches the *main* video's track during a pre-roll as
+ * well as the ad's, so "arrived while an ad was showing" and "belongs to the ad"
+ * are different things — and discarding on timing alone would throw away the
+ * very captions being waited for.
+ */
+function belongsToCurrentVideo(url: string | undefined): boolean {
+  const current = videoIdOf();
+  const id = url ? captionVideoId(url) : null;
+  // Either side unknown: fall back to the ad state, which is the weaker signal.
+  if (id === null || current === null) return !adShowing;
+  return id === current;
+}
+
+/** Ask the page script to re-read the player response. */
+function requestRescan(): void {
+  window.postMessage(
+    { channel: CHANNEL, kind: "rescan" },
+    window.location.origin,
+  );
+}
 
 /* ── caption acquisition ────────────────────────────────────────────────── */
 
@@ -140,6 +178,11 @@ async function start(): Promise<void> {
   const found = findPlayer();
   if (!found) return;
 
+  // Attached even when the start is about to be refused: the ad ending is the
+  // only signal that will bring us back, since the URL never changed.
+  watchAds(found.player);
+  if (adShowing) return;
+
   const words = await collectWords();
   if (words.length === 0) return; // no captions: do nothing, quietly
 
@@ -176,6 +219,12 @@ function track(
   let handle = 0;
 
   const update = (): void => {
+    // An ad runs through this same element on its own clock, so reading the
+    // transcript at that offset would show real words at meaningless moments.
+    if (adShowing) {
+      overlay.clear();
+      return;
+    }
     const timeMs = video.currentTime * 1000;
     const index = wordAt(words, timeMs);
     if (index < 0) {
@@ -244,6 +293,60 @@ function teardown(): void {
   document.documentElement.classList.remove("trf-hide-native");
 }
 
+/* ── ads ────────────────────────────────────────────────────────────────── */
+
+/**
+ * Watch the player's ad state.
+ *
+ * Attached lazily, because `#movie_player` does not exist when the content
+ * script first runs. Re-attaching to the same element is a no-op, so this can be
+ * called from anywhere that has just found the player.
+ */
+function watchAds(player: HTMLElement): void {
+  if (adWatcher?.player !== player) {
+    adWatcher?.observer.disconnect();
+    const observer = new MutationObserver(() => onAdStateChange(player));
+    observer.observe(player, { attributes: true, attributeFilter: ["class"] });
+    adWatcher = { player, observer };
+  }
+
+  // Reconcile on every call, not only on the first. A MutationObserver reports
+  // changes, never the state it started from, so the page may already be mid-ad
+  // when we attach — and this is also what corrects a transition that was missed
+  // while no observer was attached at all.
+  onAdStateChange(player);
+}
+
+function onAdStateChange(player: HTMLElement): void {
+  const isAd = isAdShowing(player);
+  const action = adAction({ wasAd: adShowing, isAd, hasSession: !!session });
+  adShowing = isAd;
+
+  switch (action) {
+    case "suspend":
+      // The ad has its own clock, so the session's timings mean nothing against
+      // it. `update` bails while `adShowing`; this just clears what is on screen.
+      session?.overlay.clear();
+      break;
+    case "resume":
+      // A mid-roll interrupted captions that are still correct. Re-fetching them
+      // would be wasted work that can also fail.
+      session?.redraw();
+      break;
+    case "rescan":
+      // A pre-roll left no session. Nothing is discarded here: payloads are
+      // filtered by the video id in their own URL, so anything held is already
+      // the main video's — including tracks the player prefetched behind the ad.
+      // What is missing is the player response, which `inject.ts` declines to
+      // publish while an ad is showing and no navigation event will prompt again.
+      requestRescan();
+      void start();
+      break;
+    case "none":
+      break;
+  }
+}
+
 /* ── navigation ─────────────────────────────────────────────────────────── */
 
 /**
@@ -260,8 +363,32 @@ function onNavigate(): void {
   if (id) {
     // The player response is not ready the instant navigation fires; the page
     // script re-publishes shortly after, which starts us properly.
-    void start();
+    awaitPlayer();
   }
+}
+
+/**
+ * Look for the player until it appears, then start.
+ *
+ * `#movie_player` does not exist when the content script first runs, and there
+ * is one case where nothing else will ever prompt us: a pre-roll ad with
+ * captions switched off. No caption request is made, and the page script
+ * declines to publish a player response while an ad is showing — so without
+ * this, the ad would end with no watcher attached and the video would play
+ * unread until the page was reloaded.
+ */
+function awaitPlayer(): void {
+  let tries = 0;
+  const tick = (): void => {
+    const found = findPlayer();
+    if (found) {
+      watchAds(found.player);
+      void start();
+      return;
+    }
+    if (++tries < 40) window.setTimeout(tick, 250);
+  };
+  tick();
 }
 
 async function init(): Promise<void> {
@@ -305,7 +432,7 @@ async function init(): Promise<void> {
 
   injectPageScript();
   currentVideoId = videoIdOf();
-  void start();
+  awaitPlayer();
 }
 
 void init();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  captionVideoId,
   parseJson3,
   parseCaptions,
   pickTrack,
@@ -208,5 +209,31 @@ describe("filler removal", () => {
     const words = parseJson3(asr);
     const filtered = withoutFillers(words);
     expect(filtered[0].startMs).toBe(words[0].startMs);
+  });
+});
+
+describe("captionVideoId", () => {
+  // This is what separates an ad's captions from the video's. Nothing else can:
+  // they play at the same page URL, so timing says nothing about ownership.
+  it("reads the id from a timedtext request", () => {
+    expect(
+      captionVideoId(
+        "https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&lang=en&fmt=json3",
+      ),
+    ).toBe("dQw4w9WgXcQ");
+  });
+
+  it("reads the id from a track baseUrl", () => {
+    expect(
+      captionVideoId("/api/timedtext?caps=asr&v=abc123XYZ_-&kind=asr&lang=en"),
+    ).toBe("abc123XYZ_-");
+  });
+
+  it("returns null rather than guessing when there is no id", () => {
+    expect(
+      captionVideoId("https://www.youtube.com/api/timedtext?lang=en"),
+    ).toBeNull();
+    expect(captionVideoId("not a url at all")).toBeNull();
+    expect(captionVideoId("")).toBeNull();
   });
 });
