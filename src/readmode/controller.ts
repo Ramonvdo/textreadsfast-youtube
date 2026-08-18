@@ -1,0 +1,438 @@
+/**
+ * Read Mode: the wiring.
+ *
+ * The only impure module in `src/readmode/`. `model.ts` is pure data, `view.ts`
+ * is pure DOM, and everything that talks to YouTube, the player, the service
+ * worker or storage happens here — which is what lets the interface be rendered
+ * and screenshotted from a fixture with no browser extension involved.
+ */
+
+import {
+  chapterAt,
+  chaptersWithEnds,
+  emptyModel,
+  exportFilename,
+  noteId,
+  notesToMarkdown,
+  type ChatMessage,
+  type Note,
+  type ReadModeModel,
+} from "./model";
+import { renderReadMode, type ReadModeView } from "./view";
+import {
+  adoptPlayer,
+  keepAdopted,
+  releasePlayer,
+  requestSeek,
+  type PlayerLoan,
+} from "./player";
+import * as library from "./library";
+import { streamChat } from "./ai";
+import { thumbnailUrl } from "../shared/libraryProtocol";
+import type { ChatContext } from "../shared/aiProtocol";
+
+/** What the content script hands over when Read Mode opens. */
+export interface ReadModeContext {
+  videoId: string;
+  video: HTMLVideoElement;
+  /** Plain transcript text for the model. Empty when captions were unavailable. */
+  transcript: string;
+  title: string;
+  channel: string;
+  durationMs: number;
+  chapters: ReadModeModel["chapters"];
+  chapterSource: ReadModeModel["chapterSource"];
+  /** Re-run the RSVP reader's draw, since a resize alone will not. */
+  redrawReader?: () => void;
+}
+
+interface Session {
+  model: ReadModeModel;
+  view: ReadModeView;
+  loan: PlayerLoan | null;
+  video: HTMLVideoElement;
+  transcript: string;
+  dispose: Array<() => void>;
+  /** Set while the summary or a reply is streaming, so a second send is refused. */
+  streamingId: string | null;
+}
+
+let session: Session | null = null;
+let savedScrollY = 0;
+
+export const isReadModeOpen = (): boolean => session !== null;
+
+/* ── model plumbing ─────────────────────────────────────────────────────── */
+
+function setModel(next: Partial<ReadModeModel>): void {
+  if (!session) return;
+  session.model = { ...session.model, ...next };
+  session.view.update(session.model);
+}
+
+/* ── keyboard ───────────────────────────────────────────────────────────── */
+
+/**
+ * Stop YouTube's shortcuts firing while a note is being typed.
+ *
+ * YouTube binds them at document level, and moving the player does not unbind
+ * them — so `k` in the note box pauses the video and `j`/`l` scrub it. This
+ * would be the day-one complaint. `stopPropagation` rather than `preventDefault`,
+ * because the keystroke still has to reach the input it was aimed at.
+ */
+function shadowKeyboard(root: HTMLElement): () => void {
+  const isTyping = (target: EventTarget | null): boolean =>
+    target instanceof HTMLElement &&
+    (target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable);
+
+  const stop = (event: KeyboardEvent): void => {
+    if (isTyping(event.target)) event.stopPropagation();
+  };
+
+  root.addEventListener("keydown", stop, true);
+  root.addEventListener("keyup", stop, true);
+  root.addEventListener("keypress", stop, true);
+  return () => {
+    root.removeEventListener("keydown", stop, true);
+    root.removeEventListener("keyup", stop, true);
+    root.removeEventListener("keypress", stop, true);
+  };
+}
+
+/**
+ * Make YouTube's fullscreen button fullscreen *our* root.
+ *
+ * Its own handler targets an ancestor that no longer contains the player, so
+ * left alone it produces a black screen. Ours contains the player, so the RSVP
+ * overlay and the chrome come along.
+ */
+function interceptFullscreen(root: HTMLElement): () => void {
+  const onClick = (event: MouseEvent): void => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    if (!target.closest(".ytp-fullscreen-button")) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void root.requestFullscreen().catch(() => undefined);
+  };
+
+  root.addEventListener("click", onClick, true);
+  return () => root.removeEventListener("click", onClick, true);
+}
+
+/* ── the video clock ────────────────────────────────────────────────────── */
+
+/**
+ * Track the playhead so the active chapter follows the video.
+ *
+ * Deliberately throttled to ~4Hz rather than run per frame: this only moves a
+ * highlight in the left nav, and `update()` re-renders panes. The RSVP reader
+ * has its own per-frame loop and is untouched by this.
+ */
+function trackPlayhead(video: HTMLVideoElement): () => void {
+  let timer = 0;
+  let lastChapter = -2;
+
+  const tick = (): void => {
+    if (!session) return;
+    const currentMs = video.currentTime * 1000;
+    const index = chapterAt(session.model.chapters, currentMs);
+    // Re-render only when the active chapter actually changes; the playhead
+    // itself is only read when a note is taken.
+    if (index !== lastChapter) {
+      lastChapter = index;
+      setModel({ currentMs });
+    } else {
+      session.model.currentMs = currentMs;
+    }
+  };
+
+  timer = window.setInterval(tick, 250);
+  video.addEventListener("seeked", tick);
+  return () => {
+    window.clearInterval(timer);
+    video.removeEventListener("seeked", tick);
+  };
+}
+
+/* ── AI ─────────────────────────────────────────────────────────────────── */
+
+function chatContext(model: ReadModeModel, transcript: string): ChatContext {
+  return {
+    videoId: model.videoId,
+    title: model.title,
+    channel: model.channel,
+    transcript,
+    notes: model.notes.map((n) => ({ atMs: n.atMs, text: n.text })),
+  };
+}
+
+/** Stream one assistant turn into the model, persisting it once on completion. */
+function runChat(
+  system: string,
+  turns: Array<{ role: "user" | "assistant"; content: string }>,
+): void {
+  if (!session || session.streamingId) return;
+
+  const id = `a-${Date.now().toString(36)}`;
+  session.streamingId = id;
+
+  const placeholder: ChatMessage = {
+    id,
+    role: "assistant",
+    text: "",
+    createdAt: Date.now(),
+    streaming: true,
+  };
+  setModel({
+    messages: [...session.model.messages, placeholder],
+    chat: { kind: "loading" },
+  });
+
+  let text = "";
+
+  streamChat({
+    system,
+    messages: turns,
+    context: chatContext(session.model, session.transcript),
+    onDelta: (delta) => {
+      if (!session) return;
+      text += delta;
+      const messages = session.model.messages.map((m) =>
+        m.id === id ? { ...m, text, streaming: true } : m,
+      );
+      setModel({ messages, chat: { kind: "idle" } });
+    },
+    onDone: () => {
+      if (!session) return;
+      session.streamingId = null;
+      const finished: ChatMessage = { ...placeholder, text, streaming: false };
+      const messages = session.model.messages.map((m) =>
+        m.id === id ? finished : m,
+      );
+      setModel({ messages, chat: { kind: "idle" } });
+
+      // Written once here, not per delta — a row per token would be absurd.
+      void library.appendMessage(session.model.videoId, finished);
+      if (turns.length === 0)
+        void library.setSummary(session.model.videoId, text);
+    },
+    onError: (code, message) => {
+      if (!session) return;
+      session.streamingId = null;
+      // Drop the empty placeholder; an error is not a turn worth keeping.
+      const messages = session.model.messages.filter(
+        (m) => m.id !== id || m.text !== "",
+      );
+      setModel({
+        messages,
+        chat:
+          code === "no_key"
+            ? { kind: "needs-key" }
+            : { kind: "error", message, retryable: code !== "bad_key" },
+      });
+    },
+  });
+}
+
+/* ── open / close ───────────────────────────────────────────────────────── */
+
+export async function openReadMode(
+  ctx: ReadModeContext,
+  summaryPrompt: string,
+): Promise<void> {
+  if (session) return;
+
+  const model: ReadModeModel = {
+    ...emptyModel(ctx.videoId),
+    title: ctx.title,
+    channel: ctx.channel,
+    durationMs: ctx.durationMs,
+    currentMs: ctx.video.currentTime * 1000,
+    chapters: chaptersWithEnds(ctx.chapters, ctx.durationMs),
+    chapterSource: ctx.chapterSource,
+  };
+
+  const view = renderReadMode(model, {
+    onSeek: (ms) => {
+      requestSeek(ms / 1000);
+      // Seek locally too: the bridge is best-effort, the element always works.
+      ctx.video.currentTime = ms / 1000;
+    },
+    onAddNote: (text) => {
+      if (!session) return;
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const createdAt = Date.now();
+      const note: Note = {
+        id: noteId(session.model.videoId, createdAt),
+        atMs: Math.floor(session.model.currentMs),
+        text: trimmed,
+        createdAt,
+      };
+      setModel({ notes: [note, ...session.model.notes] });
+      void library.putNote(session.model.videoId, note);
+      void saveSession();
+    },
+    onDeleteNote: (id) => {
+      if (!session) return;
+      setModel({ notes: session.model.notes.filter((n) => n.id !== id) });
+      void library.deleteNote(session.model.videoId, id);
+      void saveSession();
+    },
+    onSendChat: (text) => {
+      if (!session) return;
+      const trimmed = text.trim();
+      if (!trimmed || session.streamingId) return;
+
+      const message: ChatMessage = {
+        id: `u-${Date.now().toString(36)}`,
+        role: "user",
+        text: trimmed,
+        createdAt: Date.now(),
+      };
+      setModel({ messages: [...session.model.messages, message] });
+      void library.appendMessage(session.model.videoId, message);
+
+      const turns = [...session.model.messages, message]
+        .filter((m) => m.text.trim().length > 0)
+        .map((m) => ({ role: m.role, content: m.text }));
+      runChat(summaryPrompt, turns);
+    },
+    onExport: () => {
+      if (!session) return;
+      exportNotes(session.model);
+    },
+    onClose: () => void closeReadMode(),
+  });
+
+  // Mounted on documentElement, a sibling of <body>: `ytd-app` creates no
+  // stacking context, so a fixed layer here outranks the masthead and dialogs.
+  document.documentElement.appendChild(view.root);
+  document.documentElement.classList.add("trf-rm-open");
+  savedScrollY = window.scrollY;
+
+  // Synchronous, and after mounting so the slot already has a real size — a
+  // zero-size or hidden slot presents no frames and freezes the RSVP reader.
+  const loan = adoptPlayer(view.playerSlot);
+
+  session = {
+    model,
+    view,
+    loan,
+    video: ctx.video,
+    transcript: ctx.transcript,
+    dispose: [],
+    streamingId: null,
+  };
+
+  if (loan) session.dispose.push(keepAdopted(loan, view.playerSlot));
+  session.dispose.push(shadowKeyboard(view.root));
+  session.dispose.push(interceptFullscreen(view.root));
+  session.dispose.push(trackPlayhead(ctx.video));
+
+  // The reader's own loop is frame-driven; a paused video presents none, so the
+  // move alone would leave the last word at the old size.
+  ctx.redrawReader?.();
+
+  await restoreSaved();
+  void saveSession();
+
+  if (ctx.transcript.trim().length > 0) runChat(summaryPrompt, []);
+  else
+    setModel({
+      chat: {
+        kind: "error",
+        message:
+          "No transcript available for this video, so there is nothing to summarise.",
+        retryable: false,
+      },
+    });
+}
+
+/** Re-attach notes, chat and summary from a previous visit to this video. */
+async function restoreSaved(): Promise<void> {
+  if (!session) return;
+  const saved = await library.getSession(session.model.videoId);
+  if (!saved || !session) return;
+
+  const notes = [...saved.notes].sort((a, b) => b.createdAt - a.createdAt);
+  if (notes.length > 0 || saved.messages.length > 0) {
+    setModel({ notes, messages: saved.messages });
+  }
+}
+
+async function saveSession(): Promise<void> {
+  if (!session) return;
+  const { model } = session;
+  await library.upsertSession({
+    videoId: model.videoId,
+    title: model.title,
+    channel: model.channel,
+    durationMs: model.durationMs,
+    thumbnailUrl: thumbnailUrl(model.videoId),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    noteCount: model.notes.length,
+    messageCount: model.messages.length,
+    chapters: model.chapters,
+    chapterSource: model.chapterSource,
+    summaryMarkdown: null,
+  });
+}
+
+function exportNotes(model: ReadModeModel): void {
+  const blob = new Blob([notesToMarkdown(model)], {
+    type: "text/markdown;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = exportFilename(model);
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  // Revoked on the next task so the download has definitely started.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export async function closeReadMode(): Promise<boolean> {
+  if (!session) return true;
+  const current = session;
+
+  // Reparenting a fullscreen element exits fullscreen anyway; doing it first
+  // keeps the transition from happening mid-teardown.
+  if (document.fullscreenElement) {
+    try {
+      await document.exitFullscreen();
+    } catch {
+      // Already exiting, or never really in it. Not worth blocking the close.
+    }
+  }
+
+  for (const dispose of current.dispose) dispose();
+  current.dispose = [];
+
+  if (current.loan && !releasePlayer(current.loan)) {
+    // Losing the player is worse than failing to exit, so stay open and say so.
+    setModel({
+      chat: {
+        kind: "error",
+        message:
+          "Could not return the video player to the page. Reload to exit read mode.",
+        retryable: false,
+      },
+    });
+    return false;
+  }
+
+  current.view.destroy();
+  document.documentElement.classList.remove("trf-rm-open");
+  window.scrollTo(0, savedScrollY);
+  session = null;
+  return true;
+}

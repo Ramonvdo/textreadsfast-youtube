@@ -1,0 +1,572 @@
+/*
+ * Read Mode: a study surface laid over the watch page.
+ *
+ * Every colour here was sampled out of video-viewer-concept.jpg rather than
+ * chosen, so the palette is the design's own. The page is Solarized-light paper
+ * with deep teal ink — warm, low contrast, and never pure white, which is the
+ * same rule the reader overlay follows for the same reason.
+ *
+ * Selectors are prefixed trf-rm- and scoped under .trf-rm, because this
+ * stylesheet lands in someone else's page.
+ *
+ * NEVER add transform, filter, opacity, backdrop-filter, will-change or
+ * contain to .trf-rm, .trf-rm-stage or .trf-rm-player. Each creates a stacking
+ * context or containing block, and YouTube's real player — with the RSVP
+ * overlay living inside it — is moved into that slot.
+ */
+
+.trf-rm {
+  --trf-rm-paper: #fdf6e3;
+  --trf-rm-ink: #063441;
+  --trf-rm-body: #586a6e;
+  --trf-rm-muted: #9aa19c;
+  --trf-rm-accent: #b12b28;
+  --trf-rm-pill: #ddd8c5;
+  --trf-rm-input: #bcb6a8;
+  --trf-rm-panel: #dedccf;
+  --trf-rm-slate: #697a81;
+  --trf-rm-send: #a43665;
+  --trf-rm-rail: #e4e1d2;
+  --trf-rm-font:
+    "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  overflow: hidden;
+  background: var(--trf-rm-paper);
+  color: var(--trf-rm-body);
+  font-family: var(--trf-rm-font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The page behind the cover must not scroll. `html` is YouTube's scroller; the
+   controller records and restores scrollY on exit. Never `display: none` on
+   `ytd-app` — that makes YouTube compute zero-size boxes and push a wrong size
+   into the player it no longer contains. */
+html.trf-rm-open,
+html.trf-rm-open body {
+  overflow: hidden !important;
+}
+
+.trf-rm *,
+.trf-rm *::before,
+.trf-rm *::after {
+  box-sizing: border-box;
+}
+
+.trf-rm :where(button) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.trf-rm :focus-visible {
+  outline: 2px solid var(--trf-rm-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ── the three columns ──────────────────────────────────────────────────── */
+
+/*
+ * Gap columns are explicit tracks rather than `column-gap`, because the design
+ * uses two different gutters: 12px between the nav and the video, 44px between
+ * the video and the chat. The `fr` ratios are the concept's own pixel widths, so
+ * the proportions hold at any window size.
+ */
+.trf-rm-grid {
+  display: grid;
+  grid-template-columns: 369fr 12fr 1087fr 44fr 356fr;
+  grid-template-rows: 100%;
+  height: 100%;
+  padding: 57px 24px 0 28px;
+}
+
+.trf-rm-nav {
+  grid-column: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: 12px;
+  padding-bottom: 40px;
+}
+
+.trf-rm-main {
+  grid-column: 3;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.trf-rm-side {
+  grid-column: 5;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 150px;
+}
+
+/* ── left navigation ────────────────────────────────────────────────────── */
+
+.trf-rm-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--trf-rm-ink);
+  letter-spacing: -0.005em;
+}
+
+.trf-rm-navlabel {
+  display: block;
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--trf-rm-body);
+}
+
+.trf-rm-navnote {
+  margin: -8px 0 14px;
+  font-size: 11px;
+  color: var(--trf-rm-muted);
+}
+
+.trf-rm-chapters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.trf-rm-chapter {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0 0 0 12px;
+  margin-bottom: 17px;
+  font-size: 13.5px;
+  line-height: 1.32;
+  color: var(--trf-rm-body);
+}
+
+.trf-rm-chapter:hover {
+  color: var(--trf-rm-ink);
+}
+
+/* The active chapter loses its indent and gains a dash in the gutter, which is
+   how the concept marks position — no fill, no weight change, nothing that
+   would pull the eye away from the video. */
+.trf-rm-chapter[aria-current="true"] {
+  color: var(--trf-rm-ink);
+}
+
+.trf-rm-chapter[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 8px;
+  height: 1.5px;
+  background: var(--trf-rm-accent);
+}
+
+/* ── the video ──────────────────────────────────────────────────────────── */
+
+/*
+ * The slot YouTube's real player is moved into.
+ *
+ * `aspect-ratio` rather than a fixed height so the column can shrink, and a
+ * `min-height` because a zero-height slot presents no frames: the video keeps
+ * playing but `requestVideoFrameCallback` stops firing and the RSVP reader
+ * freezes on its last word.
+ */
+.trf-rm-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 120px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0d0f11;
+}
+
+.trf-rm-player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.trf-rm-player > * {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── notes ──────────────────────────────────────────────────────────────── */
+
+.trf-rm-noteshead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0 10px;
+}
+
+.trf-rm-noteshead h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #3f4a44;
+  letter-spacing: -0.01em;
+}
+
+.trf-rm-export {
+  flex: none;
+  padding: 6px 24px;
+  border-radius: 7px;
+  background: var(--trf-rm-slate);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.trf-rm-export:hover {
+  background: color-mix(in srgb, var(--trf-rm-slate) 86%, #000);
+}
+
+.trf-rm-export:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.trf-rm-noteinput {
+  display: block;
+  width: 100%;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--trf-rm-input);
+  color: #262521;
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.trf-rm-noteinput::placeholder {
+  color: #7d766a;
+}
+
+.trf-rm-noteinput:focus {
+  outline: 2px solid var(--trf-rm-slate);
+  outline-offset: 1px;
+}
+
+.trf-rm-notelist {
+  list-style: none;
+  /* Pulled left by exactly the timestamp gutter, so the pills line up with the
+     video's left edge and the stamps sit outside it, as in the concept. */
+  margin: 18px 0 0 -74px;
+  padding: 0 10px 24px 0;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.trf-rm-note {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: start;
+  column-gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* The timestamp sits outside the pill, in its own gutter, right-aligned so the
+   pills all begin on the same line however long the stamp is. */
+.trf-rm-notetime {
+  padding-top: 13px;
+  text-align: right;
+  font-size: 15px;
+  color: var(--trf-rm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trf-rm-notetime:hover {
+  color: var(--trf-rm-body);
+  text-decoration: underline;
+}
+
+.trf-rm-notebody {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 14px 11px 18px;
+  border-radius: 4px;
+  background: var(--trf-rm-pill);
+}
+
+.trf-rm-notetext {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 19px;
+  line-height: 1.3;
+  color: var(--trf-rm-body);
+  overflow-wrap: anywhere;
+}
+
+.trf-rm-delete {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  color: var(--trf-rm-accent);
+  opacity: 0.9;
+}
+
+.trf-rm-delete:hover {
+  opacity: 1;
+}
+
+.trf-rm-delete svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.trf-rm-empty {
+  margin: 22px 0 0;
+  font-size: 14px;
+  color: var(--trf-rm-muted);
+}
+
+/* ── the chat column ────────────────────────────────────────────────────── */
+
+.trf-rm-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border-radius: 4px;
+  background: var(--trf-rm-panel);
+  border: 1px solid color-mix(in srgb, var(--trf-rm-body) 18%, transparent);
+  font-size: 11px;
+  line-height: 1.42;
+  color: #3d4a4d;
+}
+
+.trf-rm-msg + .trf-rm-msg {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--trf-rm-body) 16%, transparent);
+}
+
+/* The viewer's own turns are set apart so a long thread stays readable without
+   colour-coding, which would fight the calm of the page. */
+.trf-rm-msg--user .trf-rm-mdp {
+  font-weight: 600;
+  color: var(--trf-rm-ink);
+}
+
+.trf-rm-mdh {
+  margin: 10px 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2f3f43;
+}
+
+.trf-rm-mdh:first-child {
+  margin-top: 0;
+}
+
+.trf-rm-mdp {
+  margin: 0 0 6px;
+}
+
+.trf-rm-mdul {
+  margin: 0 0 6px;
+  padding-left: 14px;
+}
+
+.trf-rm-mdli {
+  margin: 0 0 2px;
+}
+
+.trf-rm-mdcode {
+  padding: 0 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--trf-rm-ink) 9%, transparent);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 0.94em;
+}
+
+.trf-rm-status {
+  margin: 0;
+  font-size: 11px;
+  color: var(--trf-rm-body);
+}
+
+.trf-rm-status--error {
+  color: var(--trf-rm-accent);
+}
+
+.trf-rm-statusbtn {
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: var(--trf-rm-slate);
+  color: #fff;
+  font-size: 11px;
+}
+
+/* A caret that only blinks while tokens are arriving. Opacity-only, and stilled
+   entirely for anyone who asked for less motion. */
+.trf-rm-caret {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--trf-rm-body);
+  animation: trf-rm-blink 1s steps(2, start) infinite;
+}
+
+@keyframes trf-rm-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.trf-rm-compose {
+  position: relative;
+  flex: none;
+  margin-top: 14px;
+  padding: 10px 12px 40px;
+  border-radius: 4px;
+  background: var(--trf-rm-panel);
+  border: 1px solid color-mix(in srgb, var(--trf-rm-body) 18%, transparent);
+}
+
+.trf-rm-composebox {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  max-height: 160px;
+  border: 0;
+  background: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #3d4a4d;
+}
+
+.trf-rm-composebox::placeholder {
+  color: color-mix(in srgb, var(--trf-rm-body) 62%, transparent);
+}
+
+.trf-rm-composebox:focus {
+  outline: none;
+}
+
+.trf-rm-compose:focus-within {
+  outline: 2px solid var(--trf-rm-slate);
+  outline-offset: 1px;
+}
+
+.trf-rm-send {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--trf-rm-send);
+  color: #fff;
+}
+
+.trf-rm-send:hover {
+  background: color-mix(in srgb, var(--trf-rm-send) 86%, #000);
+}
+
+.trf-rm-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trf-rm-send svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+
+/* ── exit ───────────────────────────────────────────────────────────────── */
+
+.trf-rm-close {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--trf-rm-muted);
+  background: none;
+}
+
+.trf-rm-close:hover {
+  background: var(--trf-rm-pill);
+  color: var(--trf-rm-ink);
+}
+
+/* ── scrollbars ─────────────────────────────────────────────────────────── */
+
+.trf-rm-nav,
+.trf-rm-notelist,
+.trf-rm-chat {
+  scrollbar-width: thin;
+  scrollbar-color: var(--trf-rm-rail) transparent;
+}
+
+.trf-rm-nav::-webkit-scrollbar,
+.trf-rm-notelist::-webkit-scrollbar,
+.trf-rm-chat::-webkit-scrollbar {
+  width: 8px;
+}
+
+.trf-rm-nav::-webkit-scrollbar-thumb,
+.trf-rm-notelist::-webkit-scrollbar-thumb,
+.trf-rm-chat::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--trf-rm-rail);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trf-rm-caret {
+    animation: none;
+  }
+}
+
+/* Narrow windows: the chat drops below rather than crushing the video, and the
+   nav narrows. Read Mode is a desktop surface, but it must not shatter. */
+@media (max-width: 1280px) {
+  .trf-rm-grid {
+    grid-template-columns: 300fr 12fr 1fr;
+    grid-template-rows: auto auto;
+    overflow-y: auto;
+    padding-right: 20px;
+  }
+
+  .trf-rm-side {
+    grid-column: 3;
+    grid-row: 2;
+    padding-top: 18px;
+  }
+}

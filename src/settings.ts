@@ -35,6 +35,9 @@ export interface Settings {
   /** Hide YouTube's own captions while the reader is running. Leaving both on
    *  means reading the same words twice, in two places. */
   hideNativeCaptions: boolean;
+  /** Keep the RSVP reader running over the video inside Read Mode. On by
+   *  default: Read Mode changes the page around the video, not the video. */
+  readerInReadMode: boolean;
   /** Preferred caption language, as a BCP-47 prefix. */
   language: string;
 }
@@ -62,6 +65,7 @@ export const DEFAULTS: Settings = {
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,
+  readerInReadMode: true,
   language: "en",
 };
 

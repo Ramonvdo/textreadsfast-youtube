@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Read Mode harness</title>
+    <link rel="stylesheet" href="readmode.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #fdf6e3;
+      }
+
+      /* The screenshot must not include a scrollbar, or every diff picks up the
+         platform's scrollbar width instead of the design. */
+      ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="harness.js"></script>
+  </body>
+</html>

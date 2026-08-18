@@ -23,6 +23,13 @@ import {
 import { ReaderOverlay } from "./overlay";
 import { adAction, isAdShowing } from "./ads";
 import {
+  forgetWatchData,
+  isReadModeOpen,
+  closeReadMode,
+  rememberWatchData,
+  toggleReadMode,
+} from "./readmodeBridge";
+import {
   DEFAULTS,
   loadSettings,
   onSettingsChanged,
@@ -53,6 +60,14 @@ let currentVideoId: string | null = null;
 let adShowing = false;
 let adWatcher: { player: HTMLElement; observer: MutationObserver } | null =
   null;
+/**
+ * Read Mode is showing and the viewer asked for no word stream there.
+ *
+ * A second, independent reason to hide the reader alongside "an ad is playing".
+ * They have to compose: `update` runs every frame and would otherwise unhide on
+ * the next one, which is exactly what a naive `setHidden(true)` here did.
+ */
+let readerSuppressed = false;
 
 /* ── page bridge ────────────────────────────────────────────────────────── */
 
@@ -83,6 +98,13 @@ window.addEventListener("message", (event: MessageEvent) => {
       tracks = mine;
       void start();
     }
+  } else if (data.kind === "watchdata") {
+    // Chapters and video metadata for Read Mode. Not filtered by video id the
+    // way captions are: this payload identifies its own video internally, and
+    // the extractors ignore anything whose shape they do not recognise.
+    rememberWatchData(
+      data.payload as { watchData?: unknown; playerResponse?: unknown },
+    );
   } else if (data.kind === "timedtext") {
     const { url, body } = data.payload as { url?: string; body: string };
     if (body && belongsToCurrentVideo(url)) {
@@ -226,7 +248,7 @@ function track(
     // The player is read directly here rather than through the cached flag. A
     // session can be built in the instant before the ad class lands, and the
     // flag would then let a frame of the real transcript render over the ad.
-    if (adOnScreen()) {
+    if (adOnScreen() || readerSuppressed) {
       overlay.setHidden(true);
       overlay.clear();
       return;
@@ -382,6 +404,12 @@ function onNavigate(): void {
   teardown();
   tracks = [];
   pendingBodies = [];
+  forgetWatchData();
+
+  // Read Mode needs its own handling here. Leaving /watch has to close it, and
+  // a new video has to rebuild it — neither of which the reader session's own
+  // teardown covers, since Read Mode owns the player and the page cover.
+  if (isReadModeOpen()) void closeReadMode();
   if (id) {
     // The player response is not ready the instant navigation fires; the page
     // script re-publishes shortly after, which starts us properly.
@@ -413,8 +441,72 @@ function awaitPlayer(): void {
   tick();
 }
 
+/* ── read mode ──────────────────────────────────────────────────────────── */
+
+/**
+ * The prompt is user-editable and is not a secret, so the content script may
+ * read it. An empty string means "use the shipped default", which the service
+ * worker substitutes — that keeps the default in one place rather than two.
+ */
+async function summaryPrompt(): Promise<string> {
+  try {
+    const stored = await chrome.storage.local.get({
+      "readmode.summaryPrompt": "",
+    });
+    return String(stored["readmode.summaryPrompt"] ?? "");
+  } catch {
+    return "";
+  }
+}
+
+async function enterOrLeaveReadMode(): Promise<{
+  ok: boolean;
+  reason?: string;
+}> {
+  const reader = session
+    ? { words: session.words, video: session.video, redraw: session.redraw }
+    : null;
+  const result = await toggleReadMode(reader, await summaryPrompt());
+
+  // The reader travels with the player into read mode for free, because
+  // `.trf-reader` is mounted inside `#movie_player`. Honouring the setting is
+  // therefore about hiding it, not about moving it.
+  if (result.ok && session) {
+    readerSuppressed = isReadModeOpen() && !settings.readerInReadMode;
+    session.redraw();
+  }
+  return result;
+}
+
 async function init(): Promise<void> {
   settings = await loadSettings();
+
+  // The popup is an extension page and cannot reach the player, so it asks.
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if ((message as { type?: string })?.type !== "readmode.toggle")
+      return false;
+    void enterOrLeaveReadMode().then(sendResponse);
+    return true; // async reply; returning falsy closes the channel
+  });
+
+  // Shift+R rather than a bare letter: YouTube already owns most single keys,
+  // and a modifier keeps this from firing while someone types in a comment.
+  document.addEventListener("keydown", (event) => {
+    if (!event.shiftKey || event.ctrlKey || event.altKey || event.metaKey)
+      return;
+    if (event.key !== "R" && event.key !== "r") return;
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    void enterOrLeaveReadMode();
+  });
 
   onSettingsChanged((next) => {
     const previous = settings;
@@ -428,6 +520,9 @@ async function init(): Promise<void> {
       void start();
       return;
     }
+
+    // Toggling it while read mode is open should take effect immediately.
+    readerSuppressed = isReadModeOpen() && !next.readerInReadMode;
 
     // Filler removal is applied when the word list is built, not when it is
     // read, so this one setting cannot be handled by redrawing. Rebuild instead.

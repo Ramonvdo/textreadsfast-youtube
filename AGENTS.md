@@ -76,6 +76,41 @@ pnpm run format         # prettier; `src/reader-core` is ignored on purpose
   ad was showing" is not "belongs to the ad". Filter on the `v=` parameter in the
   caption URL (`captionVideoId`), which names the video outright.
 
+- **Read Mode borrows the real player, and the loan is fragile.** It moves
+  `#movie_player` into its own layout and gives it back on exit. Four rules, each
+  of which has a silent failure mode:
+  - The move must be **synchronous**. `appendChild` is an atomic remove-then-insert
+    and playback survives it; an `await` in the middle lets the "media element
+    removed from document" step run and the video pauses.
+  - The player slot must **never** be `display: none` or zero-size. The video keeps
+    playing but presents no frames, so `requestVideoFrameCallback` stops firing and
+    the RSVP word freezes. The rAF fallback in `track()` does not rescue this — it
+    only exists for browsers without rVFC.
+  - **No `transform`, `filter`, `opacity`, `backdrop-filter`, `will-change` or
+    `contain`** on the slot or its ancestors. Each creates a stacking context and
+    breaks `.trf-reader`, which lives _inside_ the moved player.
+  - `ReadModeView.playerSlot` keeps a **stable element identity**. `update()` may
+    re-render every other pane; re-creating the slot detaches the live player.
+
+- **The player does not observe its container.** `ResizeObserver` appears once in
+  YouTube's `base.js`, in an ad-measurement path — layout runs off a `window`
+  resize listener. A resized player must be told with `setSize`, which is an
+  expando on the element and so only reachable from `inject.ts`.
+
+- **Content-script `fetch` obeys the _host page's_ CORS**, not the extension's.
+  That is the whole reason `src/background/` exists: a model-provider call from a
+  content script on youtube.com is cross-origin and gets refused, while the same
+  fetch from the service worker runs on the extension origin.
+
+- **Content-script `indexedDB` is YouTube's database, not the extension's.** Only
+  `chrome.*` is extension-scoped there, so the library could never have lived in
+  the content script whatever the arrangement.
+
+- **The API key lives in `chrome.storage.local`, never `sync`.** `sync`
+  replicates to Google's servers and every signed-in device. Only
+  `src/background/secrets.ts` reads it, and `scripts/check-boundaries.mjs` fails
+  the build if anything under `src/content/**` or `src/page/**` goes near it.
+
 - **A profile is not the whole of `Settings`.** `enabled` and `language` are
   excluded deliberately — they belong to the user, not to a reading style, and a
   profile switch that turned the reader off would read as a bug. `PROFILE_FIELDS`

@@ -14,6 +14,7 @@
 
 import { ReaderOverlay } from "../content/overlay";
 import { ProfileBar } from "./profileBar";
+import { mountAiSettings } from "./aiSettings";
 import { classify } from "../reader-core/words";
 import { FONT_LABELS, type ReaderFont } from "../reader-core/fonts";
 import {
@@ -195,6 +196,13 @@ const FIELDS: Field[] = [
     group: "captions",
     label: "Remove fillers",
     help: "Drop um, uh and similar. They pass unnoticed in speech but interrupt a written stream.",
+  },
+  {
+    kind: "toggle",
+    key: "readerInReadMode",
+    group: "reading",
+    label: "Reader in read mode",
+    help: "Keep the one-word reader running over the video while studying in read mode.",
   },
   {
     kind: "toggle",
@@ -398,6 +406,10 @@ async function main(): Promise<void> {
   }
 
   renderFields();
+
+  const aiHost = document.getElementById("group-ai");
+  if (aiHost) mountAiSettings(aiHost);
+
   runPreview();
 }
 

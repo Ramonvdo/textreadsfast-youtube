@@ -8,13 +8,13 @@
     "48": "icons/48.png",
     "128": "icons/128.png"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": ["*://*.youtube.com/*"],
   "content_scripts": [
     {
       "matches": ["*://www.youtube.com/*"],
       "js": ["content.js"],
-      "css": ["reader.css"],
+      "css": ["reader.css", "readmode.css"],
       "run_at": "document_idle",
       "all_frames": false
     }
@@ -32,5 +32,9 @@
   "action": {
     "default_title": "TextReadsFast",
     "default_popup": "popup.html"
+  },
+  "optional_host_permissions": ["https://openrouter.ai/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js"
   }
 }

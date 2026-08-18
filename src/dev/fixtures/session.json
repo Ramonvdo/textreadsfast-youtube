@@ -1,0 +1,69 @@
+{
+  "videoId": "concept-fixture",
+  "title": "Claude Code New Features, Explained",
+  "channel": "Greg Isenberg",
+  "durationMs": 1425000,
+  "currentMs": 621000,
+  "chapterSource": "description",
+  "chapters": [
+    { "title": "Intro: The AI Employee Map", "startMs": 0 },
+    {
+      "title": "Step 1: Creating The Workspace In Claude Desktop",
+      "startMs": 74000
+    },
+    { "title": "Step 2: The Brief And Plan Mode", "startMs": 168000 },
+    { "title": "Step 3: The Ticket And Defining Done", "startMs": 241000 },
+    { "title": "Step 4: The Eyes And Desktop Preview", "startMs": 322000 },
+    {
+      "title": "Step 5: Review In Layers And The Diff View",
+      "startMs": 415000
+    },
+    { "title": "Step 6: The Schedule And Routines", "startMs": 508000 },
+    {
+      "title": "Step 7: Parallel Agents And Worktree Isolation",
+      "startMs": 602000
+    },
+    {
+      "title": "Step 8: Permissions: Safe, Ask First, Human-Owned",
+      "startMs": 731000
+    },
+    { "title": "Step 9: Skills, Connectors, And Hooks", "startMs": 858000 },
+    { "title": "The Seven-Day Plan", "startMs": 1102000 },
+    { "title": "Closing Thoughts", "startMs": 1307000 }
+  ],
+  "notes": [
+    {
+      "id": "concept-fixture:1",
+      "atMs": 621000,
+      "text": "The video talks about Claude Code and how layers matter",
+      "createdAt": 1
+    },
+    {
+      "id": "concept-fixture:2",
+      "atMs": 452000,
+      "text": "Parallel agents seem to work by defining sub-agents and making them verify their work",
+      "createdAt": 2
+    },
+    {
+      "id": "concept-fixture:3",
+      "atMs": 201000,
+      "text": "Creating a workspace in the IDE you need to click on Extension tab",
+      "createdAt": 3
+    },
+    {
+      "id": "concept-fixture:4",
+      "atMs": 96000,
+      "text": "CLAUDE.md holds the working style rules, ROADMAP.md holds the weekly goals",
+      "createdAt": 4
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "role": "assistant",
+      "createdAt": 10,
+      "text": "Setting up Claude Code as an AI employee replaces one-off chat prompts with a structured project workspace that runs, tests, and updates work 24/7.\n\n**What It Is**\n- A system that organizes your code folder so Claude Code acts like a trained team member rather than a simple chatbot.\n\n**Why It Works**\n- Prevents vague code changes, catches bugs automatically before shipping, and runs routine business tasks while you sleep.\n\n**How to Implement**\n\n1. Build the Workspace\nCreate core folders (`/app`, `/context`, `/customers`, `/demos`, `/routines`) and three markdown control files:\n- `CLAUDE.md`: States working style rules and product context.\n- `ROADMAP.md`: Lists weekly goals and explicitly states what is out of scope.\n- `REVIEW.md`: Holds your quality checklist for code inspection.\n\n2. Use Plan Mode First\nForce Claude to read project context and outline its file changes, user flow, and risks before touching code.\n\n3. Assign Single Tickets\nGive clear, small assignments with exact finish lines (e.g., \"add an email weight-list form with a success state\") instead of vague instructions.\n\n4. Enable Visual Testing (Eyes)\nDirect Claude to open the desktop app preview, click through user steps, inspect console logs, and fix UI flaws directly.\n\n5. Review in Layers\nUse code diff views and prompt Claude to sort found issues into three categories: must-fix, should-fix, and safe-to-ship.\n\n6. Set Automated Routines\nSchedule recurring background tasks, such as a 7:00 AM daily morning summary or a weekly issue review.\n\n7. Run Parallel Sessions\nSeparate unrelated jobs (like bug fixes, page copy, and demo scripts) into individual Claude sessions to avoid overlapping changes.\n\n8. Define Strict Permissions\nAllow safe actions (reading files, local tests), require explicit human approval for anything that touches production."
+    }
+  ],
+  "chat": { "kind": "idle" }
+}

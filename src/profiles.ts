@@ -46,6 +46,7 @@ const PROFILE_FIELDS: Record<keyof ProfileSettings, true> = {
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,
+  readerInReadMode: true,
 };
 
 export const PROFILE_KEYS = Object.keys(PROFILE_FIELDS) as Array<
@@ -108,6 +109,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
+      readerInReadMode: true,
     },
   },
   {
@@ -130,6 +132,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
+      readerInReadMode: true,
     },
   },
   {
@@ -152,6 +155,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
+      readerInReadMode: true,
     },
   },
   {
@@ -176,6 +180,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
+      readerInReadMode: true,
     },
   },
   {
@@ -198,6 +203,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
+      readerInReadMode: true,
     },
   },
 ];

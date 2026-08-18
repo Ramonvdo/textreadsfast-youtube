@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Library — TextReadsFast</title>
+    <link rel="stylesheet" href="readmode.css" />
+    <style>
+      /* The library shares Read Mode's palette so the two read as one product,
+         with a dark variant built from the same relationships. */
+      :root {
+        --paper: #fdf6e3;
+        --ink: #063441;
+        --body: #586a6e;
+        --muted: #9aa19c;
+        --accent: #b12b28;
+        --pill: #ddd8c5;
+        --panel: #dedccf;
+        --slate: #697a81;
+        --edge: rgba(6, 52, 65, 0.14);
+        color-scheme: light dark;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #16181b;
+          --ink: #e8e6e3;
+          --body: #b6bdbb;
+          --muted: #838a88;
+          --accent: #e4572e;
+          --pill: #23262b;
+          --panel: #1d2023;
+          --slate: #8b979c;
+          --edge: rgba(255, 255, 255, 0.14);
+        }
+      }
+
+      body {
+        margin: 0;
+        padding: 40px 24px 80px;
+        background: var(--paper);
+        color: var(--body);
+        font-family:
+          "Geist",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 26px;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+      }
+
+      .lede {
+        margin: 0 0 28px;
+        color: var(--muted);
+        max-width: 60ch;
+      }
+
+      .bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+
+      #search {
+        flex: 1;
+        max-width: 320px;
+        font: inherit;
+        font-size: 14px;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--edge);
+        background: transparent;
+        color: inherit;
+      }
+
+      .count {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 18px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .card {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 1px solid var(--edge);
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .card:hover {
+        border-color: var(--slate);
+      }
+
+      .card:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .card img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        background: var(--pill);
+      }
+
+      .card-body {
+        padding: 10px 12px 12px;
+      }
+
+      .card-title {
+        margin: 0 0 3px;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.3;
+        color: var(--ink);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .card-meta {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .detail {
+        display: none;
+      }
+
+      .detail[data-open="true"] {
+        display: block;
+      }
+
+      .grid[data-hidden="true"],
+      .bar[data-hidden="true"] {
+        display: none;
+      }
+
+      .back {
+        font: inherit;
+        font-size: 13px;
+        color: var(--muted);
+        background: none;
+        border: 0;
+        padding: 4px 0;
+        margin-bottom: 16px;
+        cursor: pointer;
+      }
+
+      .back:hover {
+        color: var(--ink);
+      }
+
+      .detail h2 {
+        margin: 0 0 2px;
+        font-size: 22px;
+        color: var(--ink);
+      }
+
+      .detail .sub {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 18px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 24px;
+      }
+
+      .actions button,
+      .actions a {
+        font: inherit;
+        font-size: 13px;
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--edge);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .actions .danger:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      section.block {
+        margin-bottom: 30px;
+      }
+
+      section.block > h3 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+
+      .summary,
+      .thread {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 13px;
+      }
+
+      .notes {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .note {
+        display: grid;
+        grid-template-columns: 62px 1fr;
+        gap: 12px;
+        align-items: start;
+        margin-bottom: 8px;
+      }
+
+      .note a {
+        text-align: right;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        text-decoration: none;
+        padding-top: 9px;
+      }
+
+      .note a:hover {
+        color: var(--ink);
+        text-decoration: underline;
+      }
+
+      .note span {
+        background: var(--pill);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+
+      .turn + .turn {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid var(--edge);
+      }
+
+      .turn-role {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 3px;
+      }
+
+      .state {
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .state strong {
+        display: block;
+        color: var(--ink);
+        margin-bottom: 6px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Library</h1>
+      <p class="lede">
+        Every video you have studied in read mode, with its notes and the
+        conversation you had about it.
+      </p>
+
+      <div class="bar" id="bar">
+        <input
+          id="search"
+          type="search"
+          placeholder="Search by title or channel"
+          aria-label="Search saved sessions"
+        />
+        <span class="count" id="count"></span>
+      </div>
+
+      <ul class="grid" id="grid"></ul>
+      <div id="state"></div>
+      <div class="detail" id="detail"></div>
+    </main>
+    <script src="library.js"></script>
+  </body>
+</html>

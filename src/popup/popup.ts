@@ -22,6 +22,9 @@ import { loadSettings, saveSettings, type Settings } from "../settings";
 const list = document.getElementById("profiles") as HTMLDivElement | null;
 const toggle = document.getElementById("enabled") as HTMLInputElement | null;
 const settingsButton = document.getElementById("open-settings");
+const readModeButton = document.getElementById("read-mode");
+const libraryButton = document.getElementById("open-library");
+const note = document.getElementById("popup-note");
 
 let settings: Settings | null = null;
 let activeId = "default";
@@ -81,6 +84,35 @@ async function main(): Promise<void> {
   settingsButton?.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
     window.close();
+  });
+
+  libraryButton?.addEventListener("click", () => {
+    void chrome.tabs.create({ url: chrome.runtime.getURL("library.html") });
+    window.close();
+  });
+
+  // The popup cannot reach the player, so the content script does the work and
+  // reports back. It refuses on a page with no captions rather than opening an
+  // empty study view, and that refusal is worth showing.
+  readModeButton?.addEventListener("click", () => {
+    void (async () => {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (tab?.id === undefined) return;
+      try {
+        const reply = (await chrome.tabs.sendMessage(tab.id, {
+          type: "readmode.toggle",
+        })) as { ok: boolean; reason?: string } | undefined;
+        if (reply?.ok) window.close();
+        else if (note)
+          note.textContent =
+            reply?.reason ?? "Read mode is not available here.";
+      } catch {
+        if (note) note.textContent = "Open a YouTube video first.";
+      }
+    })();
   });
 
   paint(state.all);

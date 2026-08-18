@@ -12,7 +12,7 @@
 
 const CHANNEL = "trf-youtube";
 
-type OutboundKind = "tracks" | "timedtext";
+type OutboundKind = "tracks" | "timedtext" | "watchdata";
 
 function post(kind: OutboundKind, payload: unknown): void {
   window.postMessage(
@@ -92,9 +92,43 @@ function publishTracks(): void {
   }
 }
 
+/* ── watch data (chapters, metadata) ────────────────────────────────────── */
+
+/**
+ * The last payload published, so a re-scan does not re-post megabytes.
+ *
+ * A `/youtubei/v1/next` response is large, and `publishWatchData` is called on
+ * load, on navigation, and twice more on a re-scan.
+ */
+let lastWatchData: unknown = null;
+
+/**
+ * Chapters live in `ytInitialData`, never in `ytInitialPlayerResponse` —
+ * verified against four live videos. Both are page-context globals, which is why
+ * this has to happen here rather than in the content script.
+ *
+ * `ytInitialData` is NOT refreshed on SPA navigation, so the network hook below
+ * also captures `/youtubei/v1/next`, which is what the player actually fetches
+ * for the next video.
+ */
+function publishWatchData(): void {
+  if (adShowing()) return;
+  const data = (window as { ytInitialData?: unknown }).ytInitialData;
+  const player = (window as { ytInitialPlayerResponse?: unknown })
+    .ytInitialPlayerResponse;
+  if (!data && !player) return;
+  if (data === lastWatchData) return;
+  lastWatchData = data;
+  post("watchdata", { watchData: data, playerResponse: player });
+}
+
 /* ── network hook ───────────────────────────────────────────────────────── */
 
 const isTimedText = (url: string): boolean => url.includes("/api/timedtext");
+
+/** The watch-next payload, which carries the chapters for a video reached by
+ *  SPA navigation rather than a page load. */
+const isWatchNext = (url: string): boolean => url.includes("/youtubei/v1/next");
 
 /**
  * Capture caption payloads the player fetches for itself.
@@ -117,6 +151,15 @@ function hookNetwork(): void {
           .clone()
           .text()
           .then((body) => post("timedtext", { url, body }))
+          .catch(() => undefined);
+      } else if (isWatchNext(url)) {
+        void response
+          .clone()
+          .json()
+          .then((watchData: unknown) => {
+            lastWatchData = watchData;
+            post("watchdata", { watchData });
+          })
           .catch(() => undefined);
       }
     } catch {
@@ -148,6 +191,16 @@ function hookNetwork(): void {
           // Ignore: a failed capture just falls back to another tier.
         }
       });
+    } else if (isWatchNext(href)) {
+      this.addEventListener("load", () => {
+        try {
+          const watchData: unknown = JSON.parse(this.responseText);
+          lastWatchData = watchData;
+          post("watchdata", { watchData });
+        } catch {
+          // A shape we cannot parse simply means no chapters from this route.
+        }
+      });
     }
     if (isAsync === undefined) {
       // `.call` resolves to the widest overload, so the two-argument form has
@@ -169,24 +222,99 @@ function hookNetwork(): void {
 
 hookNetwork();
 publishTracks();
+publishWatchData();
 
 // YouTube is a single-page app: the next video's tracks arrive without a
 // reload, and the player response is not ready the instant navigation fires.
 document.addEventListener("yt-navigate-finish", () => {
   publishTracks();
-  setTimeout(publishTracks, 600);
+  publishWatchData();
+  setTimeout(() => {
+    publishTracks();
+    publishWatchData();
+  }, 600);
 });
 
 // The content script asks for this when an ad ends. No navigation event fires
 // then — the URL was the main video's throughout — so without being asked, the
 // player response we published during the ad would be the last word on it.
+/**
+ * The player's own API, which only exists in this world.
+ *
+ * `setSize` and `seekTo` are expando properties on the `#movie_player` element,
+ * so the content script cannot see them at all. Both are wrapped, because they
+ * are undocumented and can disappear in any YouTube revision — a missing method
+ * has to be a no-op, never an exception that takes the bridge down with it.
+ *
+ * `setSize` matters because the player does NOT observe its container: layout
+ * runs off a window resize listener, so Read Mode has to push the new size after
+ * moving the player into its own layout.
+ */
+function playerApi():
+  (Element & { setSize?: unknown; seekTo?: unknown }) | null {
+  return document.querySelector("#movie_player");
+}
+
+function applyPlayerSize(width: number, height: number): void {
+  try {
+    const player = playerApi();
+    if (typeof player?.setSize === "function") {
+      (player.setSize as (w: number, h: number) => void)(width, height);
+    }
+  } catch {
+    // A revision without setSize. The slot's own CSS still sizes the element.
+  }
+}
+
+function applySeek(seconds: number): void {
+  try {
+    const player = playerApi();
+    if (typeof player?.seekTo === "function") {
+      (player.seekTo as (s: number, allowSeekAhead: boolean) => void)(
+        seconds,
+        true,
+      );
+    }
+  } catch {
+    // The content script also sets video.currentTime, which always works.
+  }
+}
+
 window.addEventListener("message", (event: MessageEvent) => {
   if (event.source !== window || event.origin !== window.location.origin)
     return;
-  const data = event.data as { channel?: string; kind?: string };
-  if (data?.channel !== CHANNEL || data.kind !== "rescan") return;
-  publishTracks();
-  // The response can lag the ad ending by a moment.
-  setTimeout(publishTracks, 400);
-  setTimeout(publishTracks, 1200);
+  const data = event.data as {
+    channel?: string;
+    kind?: string;
+    payload?: unknown;
+  };
+  if (data?.channel !== CHANNEL) return;
+
+  if (data.kind === "rescan") {
+    publishTracks();
+    publishWatchData();
+    // The response can lag the ad ending by a moment.
+    setTimeout(publishTracks, 400);
+    setTimeout(publishWatchData, 400);
+    setTimeout(publishTracks, 1200);
+    return;
+  }
+
+  if (data.kind === "player-size") {
+    const { width, height } = data.payload as { width: number; height: number };
+    if (
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      width > 0 &&
+      height > 0
+    ) {
+      applyPlayerSize(width, height);
+    }
+    return;
+  }
+
+  if (data.kind === "player-seek") {
+    const { seconds } = data.payload as { seconds: number };
+    if (Number.isFinite(seconds)) applySeek(seconds);
+  }
 });

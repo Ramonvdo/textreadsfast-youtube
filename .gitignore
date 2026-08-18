@@ -6,3 +6,7 @@ dist
 
 # Packaged uploads for the Chrome Web Store
 *.zip
+
+# Screenshot output from scripts/shoot.py
+dev-shots/
+__pycache__/
