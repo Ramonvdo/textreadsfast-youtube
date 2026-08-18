@@ -62,6 +62,33 @@
   --edge: rgba(255, 255, 255, 0.18);
 }
 
+/* The three neutrals. Nothing in the surround carries a hue, which leaves the
+   pivot as the only coloured thing on screen — so "neutral" describes the
+   surround and never the accent, which has to stay findable at a glance. */
+.trf-reader[data-theme="slate"] {
+  --bg: #23262b;
+  --text: #dcdee1;
+  --faded: #8a8f97;
+  --accent: #d2694a;
+  --edge: rgba(255, 255, 255, 0.09);
+}
+
+.trf-reader[data-theme="mist"] {
+  --bg: #eef0f1;
+  --text: #26292d;
+  --faded: #8e939a;
+  --accent: #b0503a;
+  --edge: rgba(0, 0, 0, 0.1);
+}
+
+.trf-reader[data-theme="nocturne"] {
+  --bg: #1a1f27;
+  --text: #d5dae1;
+  --faded: #6f7a88;
+  --accent: #e0714a;
+  --edge: rgba(255, 255, 255, 0.09);
+}
+
 /* Between cues, or paused. Recede rather than disappear, so the reader keeps
    its place on screen instead of the video jumping when it returns. */
 .trf-reader.trf-idle {
@@ -134,7 +161,7 @@
   top: 50%;
   transform: translateY(-50%);
   color: var(--faded);
-  opacity: var(--trf-context-opacity, 0.38);
+  opacity: var(--trf-context-opacity, 0.34);
   font-weight: 400;
 }
 
@@ -163,9 +190,20 @@
   font-weight: 400;
 }
 
+/* Bionic has no focal column, so the marks that bracket one would sit in the
+   middle of the sliding window pointing at nothing. The setting stays as it is
+   — it is correct for RSVP, which is the mode it describes. */
+.trf-reader[data-mode="bionic"] .trf-guide {
+  display: none;
+}
+
+/* Text-coloured, not faded. Bionic's whole claim is that the leading letters of
+   every word in the window are emboldened — dimming these by colour *and* by
+   opacity compounded until the bold was invisible, so only the current word
+   looked emboldened and the mode did not do what it says. Opacity alone dims
+   them now, which leaves the slider meaningful and the bold legible. */
 .trf-bionic {
-  color: var(--faded);
-  opacity: var(--trf-context-opacity, 0.38);
+  opacity: var(--trf-context-opacity, 0.34);
 }
 
 .trf-bionic--current {

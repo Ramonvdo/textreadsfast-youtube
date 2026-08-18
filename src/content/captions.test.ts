@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseJson3, parseCaptions, pickTrack, wordAt, withoutFillers } from "./captions";
+import {
+  parseJson3,
+  parseCaptions,
+  pickTrack,
+  wordAt,
+  withoutFillers,
+} from "./captions";
 import type { CaptionTrack } from "./captions";
 
 /** Auto-generated tracks: one segment per word, each with its own offset. */
@@ -19,7 +25,9 @@ const asr = JSON.stringify({
 
 /** Manually uploaded tracks: a whole phrase in one segment, no word timing. */
 const manual = JSON.stringify({
-  events: [{ tStartMs: 0, dDurationMs: 1200, segs: [{ utf8: "one two three" }] }],
+  events: [
+    { tStartMs: 0, dDurationMs: 1200, segs: [{ utf8: "one two three" }] },
+  ],
 });
 
 describe("json3 captions", () => {
@@ -50,11 +58,19 @@ describe("json3 captions", () => {
     const rolling = JSON.stringify({
       events: [
         { tStartMs: 0, dDurationMs: 500, segs: [{ utf8: "first" }] },
-        { tStartMs: 500, dDurationMs: 500, aAppend: 1, segs: [{ utf8: "first" }] },
+        {
+          tStartMs: 500,
+          dDurationMs: 500,
+          aAppend: 1,
+          segs: [{ utf8: "first" }],
+        },
         { tStartMs: 500, dDurationMs: 500, segs: [{ utf8: "second" }] },
       ],
     });
-    expect(parseJson3(rolling).map((w) => w.word.text)).toEqual(["first", "second"]);
+    expect(parseJson3(rolling).map((w) => w.word.text)).toEqual([
+      "first",
+      "second",
+    ]);
   });
 
   it("never lets two words be current at the same moment", () => {
@@ -86,7 +102,11 @@ describe("json3 captions", () => {
   it("ignores empty and whitespace-only segments", () => {
     const noisy = JSON.stringify({
       events: [
-        { tStartMs: 0, dDurationMs: 900, segs: [{ utf8: "\n" }, { utf8: "real" }, { utf8: " " }] },
+        {
+          tStartMs: 0,
+          dDurationMs: 900,
+          segs: [{ utf8: "\n" }, { utf8: "real" }, { utf8: " " }],
+        },
       ],
     });
     expect(parseJson3(noisy).map((w) => w.word.text)).toEqual(["real"]);
@@ -123,15 +143,18 @@ describe("choosing a track", () => {
   });
 
   it("falls back to English, then to anything", () => {
-    expect(pickTrack([track("ja", false), track("en", false)], "nl")?.languageCode).toBe("en");
+    expect(
+      pickTrack([track("ja", false), track("en", false)], "nl")?.languageCode,
+    ).toBe("en");
     expect(pickTrack([track("ja", false)], "nl")?.languageCode).toBe("ja");
     expect(pickTrack([], "en")).toBeNull();
   });
 
   it("matches on the base language, ignoring the region", () => {
-    expect(pickTrack([track("pt-BR", false), track("de", false)], "pt")?.languageCode).toBe(
-      "pt-BR",
-    );
+    expect(
+      pickTrack([track("pt-BR", false), track("de", false)], "pt")
+        ?.languageCode,
+    ).toBe("pt-BR");
   });
 });
 

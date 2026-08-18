@@ -30,7 +30,12 @@
         padding: 40px 24px 64px;
         background: var(--page-bg);
         color: var(--page-text);
-        font-family: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-family:
+          "Geist",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
         font-size: 15px;
         line-height: 1.55;
       }
@@ -139,6 +144,100 @@
         color: var(--page-muted);
         margin-top: 10px;
       }
+
+      /* ── the profile picker ── */
+
+      .group--profile {
+        padding: 14px 16px;
+      }
+
+      .profile-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .profile-row label {
+        font-weight: 500;
+      }
+
+      .profile-row select {
+        flex: 1;
+        max-width: 280px;
+      }
+
+      .profile-note {
+        margin: 8px 0 0;
+        font-size: 13px;
+        color: var(--page-muted);
+        min-height: 1.55em;
+      }
+
+      .profile-note--modified {
+        color: var(--page-accent);
+      }
+
+      .profile-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      /* An empty action row would still reserve its gap and push the note
+         around as buttons appear and disappear. */
+      .profile-actions:empty,
+      .profile-name-row[hidden] {
+        display: none;
+      }
+
+      .profile-action {
+        font: inherit;
+        font-size: 13px;
+        padding: 5px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--page-edge);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .profile-action:hover {
+        border-color: var(--page-muted);
+      }
+
+      .profile-action[hidden] {
+        display: none;
+      }
+
+      .profile-action--primary {
+        border-color: var(--page-accent);
+        color: var(--page-accent);
+      }
+
+      .profile-action--danger:hover {
+        border-color: var(--page-accent);
+        color: var(--page-accent);
+      }
+
+      .profile-name-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .profile-name-row input {
+        font: inherit;
+        font-size: 13px;
+        flex: 1;
+        max-width: 260px;
+        padding: 5px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--page-edge);
+        background: transparent;
+        color: inherit;
+      }
     </style>
   </head>
   <body>
@@ -146,8 +245,8 @@
       <h1>TextReadsFast for YouTube</h1>
       <p class="lede">
         Subtitles, one word at a time, with the focal letter pinned in place so
-        your eyes stop jumping. Set YouTube's own playback speed higher — that is
-        where the time is saved.
+        your eyes stop jumping. Set YouTube's own playback speed higher — that
+        is where the time is saved.
       </p>
 
       <div id="preview" class="trf-reader" data-theme="focus" data-mode="rsvp">
@@ -159,7 +258,12 @@
           <span class="trf-context trf-context--after"></span>
         </div>
       </div>
-      <p class="hint">A live preview, running the same code as the player overlay.</p>
+      <p class="hint">
+        A live preview, running the same code as the player overlay.
+      </p>
+
+      <h2>Profile</h2>
+      <div class="group group--profile" id="group-profile"></div>
 
       <h2>Reading</h2>
       <div class="group" id="group-reading"></div>

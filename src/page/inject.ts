@@ -15,7 +15,10 @@ const CHANNEL = "trf-youtube";
 type OutboundKind = "tracks" | "timedtext";
 
 function post(kind: OutboundKind, payload: unknown): void {
-  window.postMessage({ channel: CHANNEL, kind, payload }, window.location.origin);
+  window.postMessage(
+    { channel: CHANNEL, kind, payload },
+    window.location.origin,
+  );
 }
 
 /* ── caption track list ─────────────────────────────────────────────────── */
@@ -34,9 +37,9 @@ function readTracks(): CaptionTrack[] {
     (window as { ytInitialPlayerResponse?: unknown }).ytInitialPlayerResponse,
   ];
 
-  const player = document.querySelector<HTMLElement & { getPlayerResponse?: () => unknown }>(
-    "#movie_player",
-  );
+  const player = document.querySelector<
+    HTMLElement & { getPlayerResponse?: () => unknown }
+  >("#movie_player");
   if (typeof player?.getPlayerResponse === "function") {
     try {
       candidates.push(player.getPlayerResponse());
@@ -90,7 +93,8 @@ function hookNetwork(): void {
   window.fetch = async function (...args: Parameters<typeof fetch>) {
     const response = await originalFetch.apply(this, args);
     try {
-      const url = typeof args[0] === "string" ? args[0] : (args[0] as Request).url;
+      const url =
+        typeof args[0] === "string" ? args[0] : (args[0] as Request).url;
       if (isTimedText(url)) {
         // Clone so the player still gets to consume its own response body.
         void response
@@ -143,7 +147,8 @@ function hookNetwork(): void {
     originalOpen.call(this, method, url, isAsync, username, password);
   }
 
-  XMLHttpRequest.prototype.open = patchedOpen as typeof XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open =
+    patchedOpen as typeof XMLHttpRequest.prototype.open;
 }
 
 hookNetwork();

@@ -8,36 +8,21 @@
     "48": "icons/48.png",
     "128": "icons/128.png"
   },
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "*://*.youtube.com/*"
-  ],
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.youtube.com/*"],
   "content_scripts": [
     {
-      "matches": [
-        "*://www.youtube.com/*"
-      ],
-      "js": [
-        "content.js"
-      ],
-      "css": [
-        "reader.css"
-      ],
+      "matches": ["*://www.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["reader.css"],
       "run_at": "document_idle",
       "all_frames": false
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "inject.js",
-        "fonts/*"
-      ],
-      "matches": [
-        "*://www.youtube.com/*"
-      ]
+      "resources": ["inject.js", "fonts/*"],
+      "matches": ["*://www.youtube.com/*"]
     }
   ],
   "options_ui": {
@@ -45,9 +30,7 @@
     "open_in_tab": true
   },
   "action": {
-    "default_title": "TextReadsFast settings"
-  },
-  "background": {
-    "service_worker": "background.js"
+    "default_title": "TextReadsFast",
+    "default_popup": "popup.html"
   }
 }

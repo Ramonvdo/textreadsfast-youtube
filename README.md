@@ -18,7 +18,7 @@ timer of its own.
 ## Why one word at a time
 
 Reading is slow mostly because the eye moves. Roughly 80% of reading time goes
-to *saccades* — the jumps between fixation points — not to recognising words.
+to _saccades_ — the jumps between fixation points — not to recognising words.
 
 Rapid Serial Visual Presentation removes the jumps by holding the text still and
 moving the words instead. The refinement that makes it work is the **Optimal
@@ -65,9 +65,27 @@ own task.
 
 `pnpm run watch` rebuilds on change — reload the extension to pick changes up.
 
+## Profiles
+
+Click the toolbar icon to switch profile mid-video, which is usually when you
+want to: the right settings depend on what is on screen.
+
+| Profile          | What it is for                                                  |
+| ---------------- | --------------------------------------------------------------- |
+| **Default**      | One word at a fixed point, dark, a little context either side.  |
+| **Serif Flow**   | A whole line at once, serif on neutral grey. Reads like a page. |
+| **Reading Room** | Light and warm, for daytime and bright video.                   |
+| **Night Study**  | Bionic on deep blue-grey, for a lecture in the dark.            |
+| **Sprint**       | Large, narrow, almost no context. For 2x and above.             |
+| **Clarity**      | Big, high contrast, letter shapes drawn for low vision.         |
+
+Editing any control leaves the change live and marks the profile _modified_ —
+built-ins are never overwritten, so **Default** stays exactly as shipped
+whatever you do to it. **Save as…** keeps your version under its own name.
+
 ## Settings
 
-Right-click the extension icon → **Options**, or find it on
+Click the toolbar icon → **All settings…**, or find Options on
 `chrome://extensions`. There is a live preview running the real overlay, so
 every control can be judged by looking at it.
 
@@ -114,7 +132,14 @@ src/
   content/       caption parsing, the overlay, the video-clock loop
   page/          runs in the page context to reach YouTube's own objects
   options/       settings page
+  popup/         toolbar profile switcher
+  profiles.ts    the built-in profiles and the saved-profile store
 ```
+
+Profiles live in their own storage keys rather than inside `Settings`, so the
+content script never parses a list it has no use for. A profile deliberately
+excludes `enabled` and `language`: those belong to you, not to a reading style,
+and switching profile must not silently turn the reader off.
 
 The reading engine lives in both repositories because they ship separately.
 `check-drift` compares them and fails on any difference — it cannot prevent

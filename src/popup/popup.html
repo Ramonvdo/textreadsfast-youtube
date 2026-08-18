@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TextReadsFast</title>
+    <!-- For the @font-face declarations. The reader's own rules are all scoped
+         under `.trf-reader`, so none of them reach this page. -->
+    <link rel="stylesheet" href="reader.css" />
+    <style>
+      :root {
+        --bg: #fbfaf8;
+        --text: #1c1b19;
+        --muted: #8b8d90;
+        --edge: rgba(0, 0, 0, 0.12);
+        --accent: #c1442a;
+        --hover: rgba(0, 0, 0, 0.04);
+        color-scheme: light dark;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16181b;
+          --text: #e8e6e3;
+          --muted: #8b8d90;
+          --edge: rgba(255, 255, 255, 0.14);
+          --accent: #e4572e;
+          --hover: rgba(255, 255, 255, 0.06);
+        }
+      }
+
+      body {
+        margin: 0;
+        width: 264px;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          "Geist",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--edge);
+      }
+
+      header strong {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .switch {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      input[type="checkbox"] {
+        accent-color: var(--accent);
+      }
+
+      #profiles {
+        padding: 6px;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+
+      .profile {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      .profile:hover {
+        background: var(--hover);
+      }
+
+      .profile small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      /* A dot rather than a tick: it reads as "current" without competing with
+         the name for attention. */
+      .profile[aria-current="true"] {
+        font-weight: 600;
+      }
+
+      .profile[aria-current="true"]::before {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-right: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        vertical-align: 0.15em;
+      }
+
+      .profile[aria-current="true"] small {
+        font-weight: 400;
+        margin-left: 14px;
+      }
+
+      footer {
+        border-top: 1px solid var(--edge);
+        padding: 8px 6px;
+      }
+
+      #open-settings {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        font-size: 13px;
+        color: var(--muted);
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      #open-settings:hover {
+        background: var(--hover);
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>TextReadsFast</strong>
+      <label class="switch">
+        <span>On</span>
+        <input type="checkbox" id="enabled" />
+      </label>
+    </header>
+    <div id="profiles"></div>
+    <footer>
+      <button type="button" id="open-settings">All settings…</button>
+    </footer>
+    <script src="popup.js"></script>
+  </body>
+</html>

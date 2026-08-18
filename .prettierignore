@@ -1,0 +1,20 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Build outputs
+dist
+
+# Fonts
+public/fonts
+
+# Copied verbatim from the desktop app.
+#
+# `check-drift` compares these byte-for-byte, so formatting them here would fail
+# it — which is what happened the first time this file did not exist. They are
+# not edited here at all: change them upstream and copy them across.
+src/reader-core
+
+# Misc
+.DS_Store
+*.log

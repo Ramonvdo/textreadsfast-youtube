@@ -5,7 +5,8 @@
  * glyph advances 1ch, so the focal column can be hit with arithmetic instead of
  * per-word canvas measurement. The proportional options are offered for
  * legibility (Atkinson Hyperlegible was designed for low vision) and taste, and
- * pay a measurement cost per new word.
+ * pay a measurement cost per new word. The serifs are the two that read as
+ * neutral at this size rather than as a period pastiche.
  *
  * Differs from the desktop copy in one line only: the desktop derives
  * `ReaderFont` from its generated Tauri bindings, which do not exist here, so
@@ -16,17 +17,24 @@ export type ReaderFont =
   | "geist_mono"
   | "jet_brains_mono"
   | "atkinson_hyperlegible"
-  | "geist";
+  | "geist"
+  | "source_serif"
+  | "literata";
 
 export const FONT_STACKS: Record<ReaderFont, string> = {
-  geist_mono: '"Geist Mono", ui-monospace, "Cascadia Mono", "Consolas", monospace',
-  jet_brains_mono: '"JetBrains Mono", ui-monospace, "Cascadia Mono", "Consolas", monospace',
+  geist_mono:
+    '"Geist Mono", ui-monospace, "Cascadia Mono", "Consolas", monospace',
+  jet_brains_mono:
+    '"JetBrains Mono", ui-monospace, "Cascadia Mono", "Consolas", monospace',
   atkinson_hyperlegible: '"Atkinson Hyperlegible", system-ui, sans-serif',
   geist: '"Geist", system-ui, sans-serif',
+  source_serif: '"Source Serif 4", Georgia, "Times New Roman", serif',
+  literata: '"Literata", Georgia, "Times New Roman", serif',
 };
 
 /** UI chrome face. Deliberately not the reading face — the two jobs differ. */
-export const UI_FONT = '"Geist", system-ui, -apple-system, "Segoe UI", sans-serif';
+export const UI_FONT =
+  '"Geist", system-ui, -apple-system, "Segoe UI", sans-serif';
 
 const MONOSPACE: ReadonlySet<ReaderFont> = new Set<ReaderFont>([
   "geist_mono",
@@ -42,4 +50,6 @@ export const FONT_LABELS: Record<ReaderFont, string> = {
   jet_brains_mono: "JetBrains Mono",
   atkinson_hyperlegible: "Atkinson Hyperlegible",
   geist: "Geist",
+  source_serif: "Source Serif 4",
+  literata: "Literata",
 };

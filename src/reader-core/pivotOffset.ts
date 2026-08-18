@@ -51,7 +51,8 @@ export function pivotOffsetPx(
   const pivot = chars[i] ?? "";
 
   // Canvas measureText does not apply letter-spacing, so add it back per gap.
-  const beforeWidth = c.measureText(before).width + letterSpacingPx * before.length;
+  const beforeWidth =
+    c.measureText(before).width + letterSpacingPx * before.length;
   const pivotWidth = c.measureText(pivot).width;
   const offset = -(beforeWidth + pivotWidth / 2);
 
@@ -111,7 +112,9 @@ export function wordExtentPx(
     const c = context();
     if (!c) return { left, right: left };
     c.font = font;
-    width = c.measureText(word).width + letterSpacingPx * Math.max(0, [...word].length - 1);
+    width =
+      c.measureText(word).width +
+      letterSpacingPx * Math.max(0, [...word].length - 1);
     if (cache.size >= CACHE_LIMIT) cache.clear();
     cache.set(key, width);
   }

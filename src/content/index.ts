@@ -20,7 +20,12 @@ import {
   type TimedWord,
 } from "./captions";
 import { ReaderOverlay } from "./overlay";
-import { DEFAULTS, loadSettings, onSettingsChanged, type Settings } from "../settings";
+import {
+  DEFAULTS,
+  loadSettings,
+  onSettingsChanged,
+  type Settings,
+} from "../settings";
 
 const CHANNEL = "trf-youtube";
 
@@ -29,6 +34,9 @@ interface Session {
   overlay: ReaderOverlay;
   video: HTMLVideoElement;
   stop: () => void;
+  /** Force one redraw. A paused video presents no frames, so a settings change
+   *  would otherwise not reach the screen until playback resumed. */
+  redraw: () => void;
 }
 
 // Not top-level await: a content script is bundled as an IIFE, where that is a
@@ -50,8 +58,13 @@ function injectPageScript(): void {
 }
 
 window.addEventListener("message", (event: MessageEvent) => {
-  if (event.source !== window || event.origin !== window.location.origin) return;
-  const data = event.data as { channel?: string; kind?: string; payload?: unknown };
+  if (event.source !== window || event.origin !== window.location.origin)
+    return;
+  const data = event.data as {
+    channel?: string;
+    kind?: string;
+    payload?: unknown;
+  };
   if (data?.channel !== CHANNEL) return;
 
   if (data.kind === "tracks") {
@@ -84,7 +97,9 @@ async function collectWords(): Promise<TimedWord[]> {
       try {
         const url = new URL(track.baseUrl);
         if (format) url.searchParams.set("fmt", format);
-        const response = await fetch(url.toString(), { credentials: "include" });
+        const response = await fetch(url.toString(), {
+          credentials: "include",
+        });
         // Note the missing `!response.ok` shortcut. Requesting a caption track
         // without the proof-of-origin token the player attaches returns
         // **HTTP 200 with an empty body**, not an error — verified against a
@@ -140,7 +155,7 @@ async function start(): Promise<void> {
     words: usable,
     overlay,
     video: found.video,
-    stop: track(found.video, usable, overlay),
+    ...track(found.video, usable, overlay),
   };
 }
 
@@ -156,7 +171,7 @@ function track(
   video: HTMLVideoElement,
   words: TimedWord[],
   overlay: ReaderOverlay,
-): () => void {
+): { stop: () => void; redraw: () => void } {
   let stopped = false;
   let handle = 0;
 
@@ -195,10 +210,13 @@ function track(
     // last word simply stays — which is the behaviour we want. Seeking while
     // paused still needs an explicit nudge.
     video.addEventListener("seeked", update);
-    return () => {
-      stopped = true;
-      withFrames.cancelVideoFrameCallback?.(handle);
-      video.removeEventListener("seeked", update);
+    return {
+      redraw: update,
+      stop: () => {
+        stopped = true;
+        withFrames.cancelVideoFrameCallback?.(handle);
+        video.removeEventListener("seeked", update);
+      },
     };
   }
 
@@ -209,10 +227,13 @@ function track(
   };
   handle = requestAnimationFrame(step);
   video.addEventListener("seeked", update);
-  return () => {
-    stopped = true;
-    cancelAnimationFrame(handle);
-    video.removeEventListener("seeked", update);
+  return {
+    redraw: update,
+    stop: () => {
+      stopped = true;
+      cancelAnimationFrame(handle);
+      video.removeEventListener("seeked", update);
+    },
   };
 }
 
@@ -247,18 +268,35 @@ async function init(): Promise<void> {
   settings = await loadSettings();
 
   onSettingsChanged((next) => {
-    const wasEnabled = settings.enabled;
+    const previous = settings;
     settings = next;
+
     if (!next.enabled) {
       teardown();
       return;
     }
-    if (!wasEnabled) {
+    if (!previous.enabled) {
       void start();
       return;
     }
+
+    // Filler removal is applied when the word list is built, not when it is
+    // read, so this one setting cannot be handled by redrawing. Rebuild instead.
+    if (previous.removeFillers !== next.removeFillers) {
+      teardown();
+      void start();
+      return;
+    }
+
     session?.overlay.apply(next);
-    document.documentElement.classList.toggle("trf-hide-native", next.hideNativeCaptions);
+    // A profile switch changes several things at once, the reading mode among
+    // them. Without this the change waits for the next presented frame, and a
+    // paused video never presents one.
+    session?.redraw();
+    document.documentElement.classList.toggle(
+      "trf-hide-native",
+      next.hideNativeCaptions,
+    );
   });
 
   document.addEventListener("yt-navigate-finish", onNavigate);

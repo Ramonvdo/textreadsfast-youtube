@@ -7,7 +7,8 @@
 
 import type { ReaderFont } from "./reader-core/fonts";
 
-export type ReaderTheme = "focus" | "paper" | "sepia" | "contrast";
+export type ReaderTheme =
+  "focus" | "paper" | "sepia" | "contrast" | "slate" | "mist" | "nocturne";
 export type ReadingMode = "rsvp" | "bionic";
 
 export interface Settings {
@@ -38,19 +39,26 @@ export interface Settings {
   language: string;
 }
 
+/**
+ * What a fresh install starts with — and, via `profiles.ts`, the Default profile.
+ *
+ * Existing installs are unaffected by changes here: `loadSettings` asks storage
+ * for these keys and gets back whatever was stored, so a default only reaches
+ * someone who never set that field.
+ */
 export const DEFAULTS: Settings = {
   enabled: true,
   mode: "rsvp",
   theme: "focus",
   font: "geist_mono",
-  fontSize: 34,
+  fontSize: 22,
   letterSpacing: 0,
   autoScale: true,
   verticalPosition: 8,
-  boxWidth: 62,
-  contextBefore: 1,
+  boxWidth: 58,
+  contextBefore: 3,
   contextAfter: 3,
-  contextOpacity: 0.38,
+  contextOpacity: 0.34,
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,
@@ -71,7 +79,9 @@ export async function saveSettings(patch: Partial<Settings>): Promise<void> {
   await chrome.storage.sync.set(patch);
 }
 
-export function onSettingsChanged(handler: (settings: Settings) => void): () => void {
+export function onSettingsChanged(
+  handler: (settings: Settings) => void,
+): () => void {
   const listener = (
     _changes: Record<string, chrome.storage.StorageChange>,
     area: string,

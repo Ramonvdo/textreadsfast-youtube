@@ -25,6 +25,7 @@ pnpm run typecheck
 pnpm test               # caption parsing and word lookup
 pnpm run check-drift    # reader-core vs the desktop app
 pnpm run check          # all of the above
+pnpm run format         # prettier; `src/reader-core` is ignored on purpose
 ```
 
 ## Things that will bite you
@@ -33,6 +34,8 @@ pnpm run check          # all of the above
   Changing it means changing both repos, or the same word reads differently in
   the app than in the browser. `pnpm run check-drift` reports divergence; it
   cannot prevent it. Behaviour that should differ belongs in `src/content/`.
+  This includes _formatting_: the comparison is byte-for-byte, so the directory
+  is in `.prettierignore`. Running prettier over it broke the check once already.
 
 - **A caption request can "succeed" and return nothing.** Fetching a track
   without the player's proof-of-origin token gives HTTP 200 with an empty body,
@@ -61,6 +64,21 @@ pnpm run check          # all of the above
 - **Auto-captions repeat themselves.** Rolling `aAppend` events duplicate the
   previous line; taking both reads every word twice.
 
+- **A profile is not the whole of `Settings`.** `enabled` and `language` are
+  excluded deliberately — they belong to the user, not to a reading style, and a
+  profile switch that turned the reader off would read as a bug. `PROFILE_FIELDS`
+  in `src/profiles.ts` is keyed by `keyof ProfileSettings` so that adding a
+  setting and forgetting the profiles is a compile error, not a half-applied
+  switch at runtime.
+
+- **`chrome.storage.sync` rejects more than 120 writes a minute**, silently. One
+  unhurried drag of one slider exceeds that, which is why the options page
+  debounces writes and flushes them on `pagehide` and before applying a profile.
+
+- **The overlay skips redrawing a word it is already showing**, and a paused
+  video presents no frames. Anything that changes what the stage should look like
+  has to clear `lastText` — `apply()` does it unconditionally for that reason.
+
 ## Design rules
 
 The reader is a precision instrument. A fixed focal point is the entire
@@ -76,7 +94,7 @@ Reading must never cost the viewer a click.
 
 Strict TypeScript, no `any`. Plain DOM rather than a framework — the whole
 surface is one word plus context, and a renderer would cost more than it saves.
-Document *why*, not *what*.
+Document _why_, not _what_.
 
 **Commits:** conventional prefixes (`feat:`, `fix:`, `docs:`, `refactor:`,
 `chore:`), and say why rather than what.

@@ -19,7 +19,11 @@ import { join, resolve } from "node:path";
 /** Each copied file, and where it came from upstream. */
 const FILES = [
   { local: "orp.ts", upstream: "src/reader/orp.ts", exact: true },
-  { local: "pivotOffset.ts", upstream: "src/reader/pivotOffset.ts", exact: true },
+  {
+    local: "pivotOffset.ts",
+    upstream: "src/reader/pivotOffset.ts",
+    exact: true,
+  },
   { local: "fonts.css", upstream: "src/styles/fonts.css", exact: true },
   // Adapted on purpose: the desktop derives its font union from generated Tauri
   // bindings that do not exist here. Compared loosely so the shared parts still
@@ -35,7 +39,9 @@ const desktop = resolve(flag === -1 ? "../textreadsfast" : args[flag + 1]);
 
 if (!existsSync(desktop)) {
   console.error(`No desktop checkout at ${desktop}`);
-  console.error("Pass one with --desktop <path>, or skip this check knowingly.");
+  console.error(
+    "Pass one with --desktop <path>, or skip this check knowingly.",
+  );
   process.exit(2);
 }
 
@@ -44,9 +50,11 @@ const norm = (s) => s.replace(/\r\n/g, "\n").trimEnd();
 /** Shared declarations, so an adapted file can still be compared on substance. */
 function declarations(source) {
   return new Set(
-    [...source.matchAll(/^(?:export\s+)?(?:const|function|interface|type)\s+(\w+)/gm)].map(
-      (m) => m[1],
-    ),
+    [
+      ...source.matchAll(
+        /^(?:export\s+)?(?:const|function|interface|type)\s+(\w+)/gm,
+      ),
+    ].map((m) => m[1]),
   );
 }
 
@@ -82,15 +90,21 @@ for (const file of FILES) {
   const there = declarations(upstream);
   const gone = [...here].filter((name) => !there.has(name));
   if (gone.length > 0) {
-    console.error(`DRIFT  ${file.local}  declares names absent from ${file.upstream}:`);
+    console.error(
+      `DRIFT  ${file.local}  declares names absent from ${file.upstream}:`,
+    );
     for (const name of gone) console.error(`         ${name}`);
     drifted += 1;
   }
 }
 
 if (drifted > 0) {
-  console.error(`\n${drifted} of ${checked} file(s) have drifted from the desktop app.`);
-  console.error("Reconcile them before releasing — the pivot must land identically in both.");
+  console.error(
+    `\n${drifted} of ${checked} file(s) have drifted from the desktop app.`,
+  );
+  console.error(
+    "Reconcile them before releasing — the pivot must land identically in both.",
+  );
   process.exit(1);
 }
 

@@ -119,7 +119,10 @@ export class ReaderOverlay {
   private rescale(player: HTMLElement | null): void {
     const height = player?.clientHeight || REFERENCE_PLAYER_HEIGHT;
     this.scale = this.settings.autoScale
-      ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, height / REFERENCE_PLAYER_HEIGHT))
+      ? Math.min(
+          MAX_SCALE,
+          Math.max(MIN_SCALE, height / REFERENCE_PLAYER_HEIGHT),
+        )
       : 1;
     this.root.style.setProperty(
       "--trf-size",
@@ -142,11 +145,20 @@ export class ReaderOverlay {
     this.root.dataset.theme = settings.theme;
     this.root.dataset.mode = settings.mode;
     this.root.style.setProperty("--trf-font", stack);
-    this.root.style.setProperty("--trf-tracking", `${settings.letterSpacing}px`);
+    this.root.style.setProperty(
+      "--trf-tracking",
+      `${settings.letterSpacing}px`,
+    );
     // Named `--trf-*` to match the stylesheet. An earlier `--context-opacity`
     // here matched nothing, so the dimness control silently did nothing.
-    this.root.style.setProperty("--trf-context-opacity", String(settings.contextOpacity));
-    this.root.style.setProperty("--trf-bottom", `${settings.verticalPosition}%`);
+    this.root.style.setProperty(
+      "--trf-context-opacity",
+      String(settings.contextOpacity),
+    );
+    this.root.style.setProperty(
+      "--trf-bottom",
+      `${settings.verticalPosition}%`,
+    );
     this.root.style.setProperty("--trf-width", `${settings.boxWidth}%`);
 
     this.guideTop.style.display = settings.showPivotGuides ? "" : "none";
@@ -154,10 +166,17 @@ export class ReaderOverlay {
 
     if (fontChanged) {
       // Cached pixel offsets were measured in the old face and would put the
-      // pivot in the wrong place.
+      // pivot in the wrong place. Gated because measuring is the expensive part.
       clearPivotCache();
-      this.lastText = null;
     }
+
+    // `render` skips redrawing a word it is already showing, which is what stops
+    // the focal point shimmering every frame. Any settings change has to clear
+    // that guard, or it will not reach the screen until the next word — never,
+    // on a paused video. This used to be gated on the font alone, which missed
+    // both the reading mode and the context counts. Settings changes are rare;
+    // one redraw costs nothing, and enumerating the triggers cost correctness.
+    this.lastText = null;
 
     // Sets `--trf-size` from the size setting and the player's current height.
     const player = this.root.parentElement;
@@ -210,11 +229,15 @@ export class ReaderOverlay {
     }`;
     const spacing = this.settings.letterSpacing;
 
-    const offset = mono ? pivotOffsetCh(text) : pivotOffsetPx(text, cssFont, spacing);
+    const offset = mono
+      ? pivotOffsetCh(text)
+      : pivotOffsetPx(text, cssFont, spacing);
     // Context words are placed against the focus word's real edges. Anchoring
     // them a fixed distance from the focal column instead lets a long word run
     // straight over them, which is what turned "brain uses to" into a pile-up.
-    const extent = mono ? wordExtentCh(text) : wordExtentPx(text, cssFont, spacing);
+    const extent = mono
+      ? wordExtentCh(text)
+      : wordExtentPx(text, cssFont, spacing);
     const unit = mono ? "ch" : "px";
 
     this.stage.style.setProperty("--trf-pivot-offset", `${offset}${unit}`);
@@ -231,7 +254,6 @@ export class ReaderOverlay {
 
     this.beforeEl.textContent = "";
     this.afterEl.textContent = "";
-    this.wordEl.style.removeProperty("--trf-pivot-offset");
 
     this.wordEl.replaceChildren(
       ...words.map((word, index) => {
@@ -239,7 +261,9 @@ export class ReaderOverlay {
         const lead = Math.max(1, Math.round(chars.length * BIONIC_LEAD));
         const span = document.createElement("span");
         span.className =
-          index === currentIndex ? "trf-bionic trf-bionic--current" : "trf-bionic";
+          index === currentIndex
+            ? "trf-bionic trf-bionic--current"
+            : "trf-bionic";
         const bold = document.createElement("b");
         bold.textContent = chars.slice(0, lead).join("");
         span.append(bold, document.createTextNode(chars.slice(lead).join("")));

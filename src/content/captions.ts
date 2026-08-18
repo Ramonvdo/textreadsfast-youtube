@@ -78,7 +78,11 @@ export function parseJson3(body: string): TimedWord[] {
       const pieces = text.split(" ").filter(Boolean);
 
       if (pieces.length === 1) {
-        words.push({ word: classify(pieces[0]), startMs: segStart, endMs: eventEnd });
+        words.push({
+          word: classify(pieces[0]),
+          startMs: segStart,
+          endMs: eventEnd,
+        });
         continue;
       }
 
@@ -90,7 +94,11 @@ export function parseJson3(body: string): TimedWord[] {
       let cursor = segStart;
       for (const piece of pieces) {
         const share = (piece.length / total) * span;
-        words.push({ word: classify(piece), startMs: cursor, endMs: cursor + share });
+        words.push({
+          word: classify(piece),
+          startMs: cursor,
+          endMs: cursor + share,
+        });
         cursor += share;
       }
     }
@@ -125,7 +133,11 @@ export function parseXml(body: string): TimedWord[] {
       node.textContent ?? "",
       "text/html",
     ).documentElement.textContent;
-    const pieces = (decoded ?? "").replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+    const pieces = (decoded ?? "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .filter(Boolean);
     if (pieces.length === 0) continue;
 
     const total = pieces.reduce((sum, p) => sum + p.length, 0);
@@ -133,7 +145,11 @@ export function parseXml(body: string): TimedWord[] {
     let cursor = start;
     for (const piece of pieces) {
       const share = (piece.length / total) * span;
-      words.push({ word: classify(piece), startMs: cursor, endMs: cursor + share });
+      words.push({
+        word: classify(piece),
+        startMs: cursor,
+        endMs: cursor + share,
+      });
       cursor += share;
     }
   }
@@ -196,7 +212,10 @@ export function withoutFillers(words: TimedWord[]): TimedWord[] {
  * punctuated and spelled correctly, and the per-word timing auto tracks provide
  * is worth less than being right.
  */
-export function pickTrack(tracks: CaptionTrack[], preferred: string): CaptionTrack | null {
+export function pickTrack(
+  tracks: CaptionTrack[],
+  preferred: string,
+): CaptionTrack | null {
   if (tracks.length === 0) return null;
   const base = (code: string) => code.split("-")[0]?.toLowerCase() ?? "";
   const want = base(preferred);

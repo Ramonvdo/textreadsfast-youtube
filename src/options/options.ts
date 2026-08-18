@@ -7,12 +7,21 @@
  *
  * The preview runs the real overlay class over a fixed passage: every control
  * here changes something you can only judge by looking at it.
+ *
+ * Profiles come first on the page, because picking one is the decision that
+ * makes most of the rest unnecessary.
  */
 
 import { ReaderOverlay } from "../content/overlay";
+import { ProfileBar } from "./profileBar";
 import { classify } from "../reader-core/words";
 import { FONT_LABELS, type ReaderFont } from "../reader-core/fonts";
-import { DEFAULTS, loadSettings, saveSettings, type Settings } from "../settings";
+import {
+  DEFAULTS,
+  loadSettings,
+  saveSettings,
+  type Settings,
+} from "../settings";
 
 const SAMPLE =
   "The highlighted letter marks the optimal recognition point, the exact position your brain uses to identify a whole word at once.";
@@ -104,6 +113,9 @@ const FIELDS: Field[] = [
       { value: "paper", label: "Paper (light)" },
       { value: "sepia", label: "Sepia" },
       { value: "contrast", label: "High contrast" },
+      { value: "slate", label: "Slate (neutral grey)" },
+      { value: "mist", label: "Mist (neutral light)" },
+      { value: "nocturne", label: "Nocturne (deep blue-grey)" },
     ],
   },
   {
@@ -209,6 +221,7 @@ const FIELDS: Field[] = [
 
 let settings: Settings = { ...DEFAULTS };
 let overlay: ReaderOverlay | null = null;
+let profileBar: ProfileBar | null = null;
 let previewIndex = 0;
 
 function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
@@ -255,7 +268,8 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
     input.step = String(field.step);
     input.value = String(settings[field.key]);
     const output = document.createElement("output");
-    const show = (v: number) => (output.textContent = field.format ? field.format(v) : String(v));
+    const show = (v: number) =>
+      (output.textContent = field.format ? field.format(v) : String(v));
     show(Number(settings[field.key]));
     input.addEventListener("input", () => {
       show(Number(input.value));
@@ -272,12 +286,65 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
 /** Autoscale sizes the text against the *player*, and the preview is not one —
  *  left on, it would scale against the options page and balloon. The preview
  *  therefore always shows the configured size, which is what the slider means. */
-const previewSettings = (from: Settings): Settings => ({ ...from, autoScale: false });
+const previewSettings = (from: Settings): Settings => ({
+  ...from,
+  autoScale: false,
+});
+
+let pending: Partial<Settings> = {};
+let flushHandle = 0;
+
+/**
+ * Coalesce writes.
+ *
+ * A range input fires `input` continuously while dragged, and `chrome.storage
+ * .sync` rejects more than 120 writes a minute — one unhurried drag of one
+ * slider exceeds that on its own, and the rejection is silent, so the setting
+ * simply stops saving. The preview still updates on every frame; only the write
+ * waits for the control to settle.
+ */
+function queueSave(patch: Partial<Settings>): void {
+  pending = { ...pending, ...patch };
+  window.clearTimeout(flushHandle);
+  flushHandle = window.setTimeout(flushSave, 250);
+}
+
+function flushSave(): Promise<void> {
+  window.clearTimeout(flushHandle);
+  if (Object.keys(pending).length === 0) return Promise.resolve();
+  const batch = pending;
+  pending = {};
+  return saveSettings(batch);
+}
+
+// Closing the tab mid-drag would otherwise drop the last edit.
+window.addEventListener("pagehide", () => void flushSave());
 
 function update(patch: Partial<Settings>): void {
   settings = { ...settings, ...patch };
-  void saveSettings(patch);
+  queueSave(patch);
   overlay?.apply(previewSettings(settings));
+  // The picker shows whether the live settings still match their profile, so it
+  // has to hear about every edit — not only about profile switches. Repaints
+  // from what it already holds; it does not re-read storage per frame.
+  profileBar?.repaint();
+}
+
+/** Rebuild every control from `settings`. Cheaper to reason about than patching
+ *  each control in place, and there is no state in them worth preserving. */
+function renderFields(): void {
+  for (const group of ["reading", "appearance", "captions"] as Group[]) {
+    const host = document.getElementById(`group-${group}`);
+    if (!host) continue;
+    host.replaceChildren();
+    for (const field of FIELDS.filter((f) => f.group === group)) {
+      host.append(
+        row(field, (value) =>
+          update({ [field.key]: value } as Partial<Settings>),
+        ),
+      );
+    }
+  }
 }
 
 /** Advance the preview at a readable, fixed pace. There is no queue to react to
@@ -287,11 +354,13 @@ function runPreview(): void {
   if (!host) return;
   overlay = new ReaderOverlay(previewSettings(settings));
   // Reuse the existing markup rather than mounting a second copy.
-  host.replaceWith(((): HTMLElement => {
-    const mounted = (overlay as unknown as { root: HTMLElement }).root;
-    mounted.id = "preview";
-    return mounted;
-  })());
+  host.replaceWith(
+    ((): HTMLElement => {
+      const mounted = (overlay as unknown as { root: HTMLElement }).root;
+      mounted.id = "preview";
+      return mounted;
+    })(),
+  );
 
   window.setInterval(() => {
     previewIndex = (previewIndex + 1) % SAMPLE_WORDS.length;
@@ -301,7 +370,10 @@ function runPreview(): void {
         Math.max(0, previewIndex - settings.contextBefore),
         previewIndex,
       ),
-      upcoming: SAMPLE_WORDS.slice(previewIndex + 1, previewIndex + 1 + settings.contextAfter),
+      upcoming: SAMPLE_WORDS.slice(
+        previewIndex + 1,
+        previewIndex + 1 + settings.contextAfter,
+      ),
     });
   }, 380);
 }
@@ -309,14 +381,23 @@ function runPreview(): void {
 async function main(): Promise<void> {
   settings = await loadSettings();
 
-  for (const group of ["reading", "appearance", "captions"] as Group[]) {
-    const host = document.getElementById(`group-${group}`);
-    if (!host) continue;
-    for (const field of FIELDS.filter((f) => f.group === group)) {
-      host.append(row(field, (value) => update({ [field.key]: value } as Partial<Settings>)));
-    }
+  const profileHost = document.getElementById("group-profile");
+  if (profileHost) {
+    profileBar = new ProfileBar(profileHost, {
+      settings: () => settings,
+      // A slider edit still waiting on its debounce would otherwise land after
+      // the profile did, and quietly overwrite one of its values.
+      flushPending: flushSave,
+      onApplied: (next) => {
+        settings = next;
+        renderFields();
+        overlay?.apply(previewSettings(settings));
+      },
+    });
+    await profileBar.refresh();
   }
 
+  renderFields();
   runPreview();
 }
 

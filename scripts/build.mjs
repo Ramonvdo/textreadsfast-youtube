@@ -23,26 +23,50 @@ const entries = {
   content: "src/content/index.ts",
   inject: "src/page/inject.ts",
   options: "src/options/options.ts",
-  background: "src/background.ts",
+  popup: "src/popup/popup.ts",
 };
 
 /** The font stylesheet ships as-is, but its `url()`s must resolve against the
  *  extension root rather than a web origin. */
 async function buildCss() {
-  const reader = await readFile(resolve(root, "src/content/reader.css"), "utf8");
-  const fonts = await readFile(resolve(root, "src/reader-core/fonts.css"), "utf8");
+  const reader = await readFile(
+    resolve(root, "src/content/reader.css"),
+    "utf8",
+  );
+  const fonts = await readFile(
+    resolve(root, "src/reader-core/fonts.css"),
+    "utf8",
+  );
   // `/fonts/x.woff2` is correct for the desktop app's web root; inside an
   // extension the same path must be relative so Chrome resolves it against the
   // package. Rewritten here so the shared file stays byte-identical upstream.
   const scoped = fonts.replace(/url\("\/fonts\//g, 'url("fonts/');
-  await writeFile(resolve(outdir, "reader.css"), `${scoped}\n\n${reader}`, "utf8");
+  await writeFile(
+    resolve(outdir, "reader.css"),
+    `${scoped}\n\n${reader}`,
+    "utf8",
+  );
 }
 
 async function copyStatic() {
-  await cp(resolve(root, "src/manifest.json"), resolve(outdir, "manifest.json"));
-  await cp(resolve(root, "public/fonts"), resolve(outdir, "fonts"), { recursive: true });
-  await cp(resolve(root, "icons"), resolve(outdir, "icons"), { recursive: true });
-  await cp(resolve(root, "src/options/options.html"), resolve(outdir, "options.html"));
+  await cp(
+    resolve(root, "src/manifest.json"),
+    resolve(outdir, "manifest.json"),
+  );
+  await cp(resolve(root, "public/fonts"), resolve(outdir, "fonts"), {
+    recursive: true,
+  });
+  await cp(resolve(root, "icons"), resolve(outdir, "icons"), {
+    recursive: true,
+  });
+  await cp(
+    resolve(root, "src/options/options.html"),
+    resolve(outdir, "options.html"),
+  );
+  await cp(
+    resolve(root, "src/popup/popup.html"),
+    resolve(outdir, "popup.html"),
+  );
   await buildCss();
 }
 
