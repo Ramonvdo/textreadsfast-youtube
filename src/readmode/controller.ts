@@ -28,7 +28,8 @@ import {
 } from "./player";
 import * as library from "./library";
 import { streamChat } from "./ai";
-import { thumbnailUrl } from "../shared/libraryProtocol";
+import { COVERAGE_BUCKET_MS, thumbnailUrl } from "../shared/libraryProtocol";
+import { isAdShowing } from "../content/ads";
 import type { ChatContext } from "../shared/aiProtocol";
 
 /** What the content script hands over when Read Mode opens. */
@@ -163,6 +164,95 @@ function trackPlayhead(video: HTMLVideoElement): () => void {
   return () => {
     window.clearInterval(timer);
     video.removeEventListener("seeked", tick);
+  };
+}
+
+/* ── study stats ────────────────────────────────────────────────────────── */
+
+/** How often the accumulated deltas are pushed to the library. */
+const FLUSH_MS = 10_000;
+
+/**
+ * Measure the session.
+ *
+ * Three numbers, because "did I get through it" and "what did it cost me" are
+ * different questions:
+ *
+ * - `watchedMs` is **real** elapsed time with the video playing, not video
+ *   time — watching at 2x should not report twice the effort.
+ * - `openMs` is wall clock with Read Mode open, which includes the time spent
+ *   paused writing a note. That is study too.
+ * - `seen` marks 5-second buckets of the timeline, so rewatching the same
+ *   thirty seconds cannot inflate the coverage figure.
+ *
+ * `document.visibilityState` gates both timers: a tab left open in another
+ * window is not studying, and counting it would make every number a lie.
+ */
+function trackStats(
+  video: HTMLVideoElement,
+  videoId: string,
+  durationMs: number,
+) {
+  const totalBuckets =
+    durationMs > 0 ? Math.ceil(durationMs / COVERAGE_BUCKET_MS) : 0;
+
+  let watchedMs = 0;
+  let openMs = 0;
+  let seen = new Set<number>();
+  let opened = true; // the first flush records the visit
+  let last = Date.now();
+
+  const flush = (): void => {
+    if (watchedMs <= 0 && openMs <= 0 && seen.size === 0 && !opened) return;
+    const payload = {
+      videoId,
+      watchedMs,
+      openMs,
+      seen: [...seen],
+      totalBuckets,
+      opened,
+    };
+    watchedMs = 0;
+    openMs = 0;
+    seen = new Set();
+    opened = false;
+    void library.recordActivity(payload);
+  };
+
+  const tick = (): void => {
+    const now = Date.now();
+    const delta = now - last;
+    last = now;
+
+    // A long gap means the machine slept or the tab was throttled to death;
+    // counting it would invent hours nobody spent.
+    if (delta <= 0 || delta > 5_000) return;
+    if (document.visibilityState !== "visible") return;
+
+    openMs += delta;
+
+    const player = document.querySelector("#movie_player");
+    if (video.paused || video.ended || isAdShowing(player)) return;
+
+    watchedMs += delta;
+    if (totalBuckets > 0) {
+      const bucket = Math.floor(
+        (video.currentTime * 1000) / COVERAGE_BUCKET_MS,
+      );
+      if (bucket >= 0 && bucket < totalBuckets) seen.add(bucket);
+    }
+  };
+
+  const timer = window.setInterval(tick, 1_000);
+  const flushTimer = window.setInterval(flush, FLUSH_MS);
+  // A closed tab is the most common way a session ends, and it gets no teardown.
+  window.addEventListener("pagehide", flush);
+
+  return () => {
+    window.clearInterval(timer);
+    window.clearInterval(flushTimer);
+    window.removeEventListener("pagehide", flush);
+    flush();
   };
 }
 
@@ -318,6 +408,16 @@ export async function openReadMode(
       exportNotes(session.model);
     },
     onClose: () => void closeReadMode(),
+    onRegenerate: () => {
+      if (!session || session.streamingId) return;
+      // Drop the previous answer first, so the new one replaces it rather than
+      // appending a second summary below the first.
+      setModel({
+        messages: session.model.messages.filter((m) => m.role !== "assistant"),
+        chat: { kind: "loading" },
+      });
+      runChat(summaryPrompt, []);
+    },
   });
 
   // Mounted on documentElement, a sibling of <body>: `ytd-app` creates no
@@ -356,16 +456,28 @@ export async function openReadMode(
   session.dispose.push(shadowKeyboard(view.root));
   session.dispose.push(interceptFullscreen(view.root));
   session.dispose.push(trackPlayhead(ctx.video));
+  session.dispose.push(trackStats(ctx.video, ctx.videoId, ctx.durationMs));
 
   // The reader's own loop is frame-driven; a paused video presents none, so the
   // move alone would leave the last word at the old size.
   ctx.redrawReader?.();
 
-  await restoreSaved();
+  const alreadySummarised = await restoreSaved();
   void saveSession();
 
-  if (ctx.transcript.trim().length > 0) runChat(summaryPrompt, []);
-  else
+  /*
+   * Do not pay for the same summary twice.
+   *
+   * The summary was always being saved — `library.setSummary` writes it and the
+   * assistant turn goes into `messages` — it was simply never consulted, so
+   * every re-open regenerated it from scratch. Regenerating is still one click
+   * away, but it is now a decision rather than a default.
+   */
+  if (alreadySummarised) {
+    setModel({ chat: { kind: "idle" } });
+  } else if (ctx.transcript.trim().length > 0) {
+    runChat(summaryPrompt, []);
+  } else {
     setModel({
       chat: {
         kind: "error",
@@ -374,18 +486,28 @@ export async function openReadMode(
         retryable: false,
       },
     });
+  }
 }
 
-/** Re-attach notes, chat and summary from a previous visit to this video. */
-async function restoreSaved(): Promise<void> {
-  if (!session) return;
+/**
+ * Re-attach notes, chat and summary from a previous visit.
+ *
+ * Returns whether this video has already been summarised, which is what decides
+ * against paying for it a second time.
+ */
+async function restoreSaved(): Promise<boolean> {
+  if (!session) return false;
   const saved = await library.getSession(session.model.videoId);
-  if (!saved || !session) return;
+  if (!saved || !session) return false;
 
   const notes = [...saved.notes].sort((a, b) => b.createdAt - a.createdAt);
   if (notes.length > 0 || saved.messages.length > 0) {
     setModel({ notes, messages: saved.messages });
   }
+
+  const hasAssistantTurn = saved.messages.some((m) => m.role === "assistant");
+  const hasStoredSummary = Boolean(saved.session?.summaryMarkdown?.trim());
+  return hasAssistantTurn || hasStoredSummary;
 }
 
 async function saveSession(): Promise<void> {

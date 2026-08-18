@@ -9,10 +9,12 @@
 
 import type {
   FullSession,
+  Granularity,
   LibraryRequest,
   LibraryResponse,
-  SessionRecord,
+  LibraryStats,
   SessionSummary,
+  SessionUpsertInput,
   TranscriptRecord,
 } from "../shared/libraryProtocol";
 import type { ChatMessage, Note } from "./model";
@@ -31,9 +33,34 @@ async function send(request: LibraryRequest): Promise<LibraryResponse> {
 }
 
 export async function upsertSession(
-  session: Omit<SessionRecord, "schemaVersion">,
+  session: SessionUpsertInput,
 ): Promise<void> {
   await send({ type: "library.upsertSession", session });
+}
+
+/**
+ * Report what happened since the last flush.
+ *
+ * Deltas, never totals: two tabs on the same video would otherwise overwrite
+ * each other's numbers instead of adding to them.
+ */
+export async function recordActivity(input: {
+  videoId: string;
+  watchedMs: number;
+  openMs: number;
+  seen: number[];
+  totalBuckets: number;
+  opened: boolean;
+}): Promise<void> {
+  await send({ type: "library.recordActivity", ...input });
+}
+
+export async function stats(
+  granularity: Granularity,
+  videoId?: string,
+): Promise<LibraryStats | null> {
+  const reply = await send({ type: "library.stats", granularity, videoId });
+  return reply.ok && reply.type === "stats" ? reply.stats : null;
 }
 
 export async function putTranscript(

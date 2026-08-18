@@ -66,12 +66,13 @@ function compare(paths: readonly string[], a: Row, b: Row): number {
  * happening to be sorted already.
  */
 function memoryStore(reverseIndexResults = false): MemoryStore {
-  const data = new Map<StoreName, Map<string, Row>>([
-    ["sessions", new Map()],
-    ["transcripts", new Map()],
-    ["notes", new Map()],
-    ["messages", new Map()],
-  ]);
+  // Derived from KEY_PATHS rather than listed, so adding a store to the schema
+  // cannot leave the fake silently missing it. It did exactly that once: writes
+  // to `activity` threw, `dispatch` swallowed the error into `{ ok: false }`,
+  // and the tests that only asserted on sessions carried on passing.
+  const data = new Map<StoreName, Map<string, Row>>(
+    (Object.keys(KEY_PATHS) as StoreName[]).map((name) => [name, new Map()]),
+  );
   const reads: StoreName[] = [];
 
   const table = (name: StoreName): Map<string, Row> => {
@@ -682,5 +683,191 @@ describe("dispatch", () => {
     // script as `undefined` with the reason left in the worker's console.
     const response = await handleLibraryRequest({ type: "library.list" });
     expect(response.ok).toBe(false);
+  });
+});
+
+describe("study stats (schema 2)", () => {
+  const baseSession = {
+    videoId: "vid",
+    title: "T",
+    channel: "C",
+    durationMs: 60_000,
+    thumbnailUrl: "",
+    createdAt: 1,
+    updatedAt: 1,
+    noteCount: 0,
+    messageCount: 0,
+    chapters: [],
+    chapterSource: "none" as const,
+    summaryMarkdown: null,
+  };
+
+  async function seeded() {
+    const store = memoryStore();
+    await dispatch(store, {
+      type: "library.upsertSession",
+      session: baseSession,
+    });
+    return store;
+  }
+
+  it("accumulates deltas rather than replacing totals", async () => {
+    const store = await seeded();
+
+    for (let i = 0; i < 3; i += 1) {
+      await dispatch(store, {
+        type: "library.recordActivity",
+        videoId: "vid",
+        watchedMs: 1_000,
+        openMs: 2_000,
+        seen: [i],
+        totalBuckets: 12,
+        opened: i === 0,
+      });
+    }
+
+    const reply = await dispatch(store, {
+      type: "library.getSession",
+      videoId: "vid",
+    });
+    expect(reply.ok && reply.type === "session").toBe(true);
+    if (!reply.ok || reply.type !== "session") return;
+
+    const session = reply.session.session!;
+    expect(session.watchedMs).toBe(3_000);
+    expect(session.openMs).toBe(6_000);
+    // Only the first flush counted as a visit.
+    expect(session.openCount).toBe(1);
+    expect(session.coveragePct).toBeCloseTo(3 / 12);
+  });
+
+  // Rewatching the same stretch is effort, not progress. This is the whole
+  // reason coverage is a bucket map instead of a running total.
+  it("does not let a rewatched bucket inflate coverage", async () => {
+    const store = await seeded();
+
+    for (let i = 0; i < 5; i += 1) {
+      await dispatch(store, {
+        type: "library.recordActivity",
+        videoId: "vid",
+        watchedMs: 1_000,
+        openMs: 1_000,
+        seen: [0],
+        totalBuckets: 10,
+        opened: false,
+      });
+    }
+
+    const reply = await dispatch(store, {
+      type: "library.getSession",
+      videoId: "vid",
+    });
+    if (!reply.ok || reply.type !== "session") throw new Error("no session");
+    expect(reply.session.session!.coveragePct).toBeCloseTo(0.1);
+    expect(reply.session.session!.watchedMs).toBe(5_000);
+  });
+
+  /*
+   * A v1 session has none of these fields. It must open, and it must start
+   * counting from zero rather than claiming a history it never had.
+   */
+  it("adopts a session saved before stats existed", async () => {
+    const store = memoryStore();
+    await store.put("sessions", {
+      ...baseSession,
+      schemaVersion: 1,
+      // No coverage, watchedMs, openMs, openCount, lastOpenedAt, coveragePct.
+    });
+
+    await dispatch(store, {
+      type: "library.recordActivity",
+      videoId: "vid",
+      watchedMs: 4_000,
+      openMs: 4_000,
+      seen: [1],
+      totalBuckets: 10,
+      opened: true,
+    });
+
+    const reply = await dispatch(store, {
+      type: "library.getSession",
+      videoId: "vid",
+    });
+    if (!reply.ok || reply.type !== "session") throw new Error("no session");
+    const session = reply.session.session!;
+
+    expect(session.watchedMs).toBe(4_000);
+    expect(session.openCount).toBe(1);
+    expect(session.title).toBe("T"); // nothing lost in the adoption
+  });
+
+  it("never shrinks coverage when a later duration is shorter", async () => {
+    const store = await seeded();
+
+    await dispatch(store, {
+      type: "library.recordActivity",
+      videoId: "vid",
+      watchedMs: 1_000,
+      openMs: 1_000,
+      seen: [19],
+      totalBuckets: 20,
+      opened: true,
+    });
+    // A second visit reports a shorter timeline; the history must survive.
+    await dispatch(store, {
+      type: "library.recordActivity",
+      videoId: "vid",
+      watchedMs: 1_000,
+      openMs: 1_000,
+      seen: [0],
+      totalBuckets: 5,
+      opened: false,
+    });
+
+    const reply = await dispatch(store, {
+      type: "library.getSession",
+      videoId: "vid",
+    });
+    if (!reply.ok || reply.type !== "session") throw new Error("no session");
+    expect(reply.session.session!.coverage.length).toBe(20);
+    expect(reply.session.session!.coverage[19]).toBe(1);
+  });
+
+  it("ignores activity for a video that was never saved", async () => {
+    const store = memoryStore();
+    const reply = await dispatch(store, {
+      type: "library.recordActivity",
+      videoId: "ghost",
+      watchedMs: 1_000,
+      openMs: 1_000,
+      seen: [0],
+      totalBuckets: 4,
+      opened: true,
+    });
+    expect(reply.ok).toBe(true);
+  });
+
+  it("buckets activity by day and totals it", async () => {
+    const store = await seeded();
+    await dispatch(store, {
+      type: "library.recordActivity",
+      videoId: "vid",
+      watchedMs: 90_000,
+      openMs: 120_000,
+      seen: [0, 1],
+      totalBuckets: 12,
+      opened: true,
+    });
+
+    const reply = await dispatch(store, {
+      type: "library.stats",
+      granularity: "day",
+    });
+    if (!reply.ok || reply.type !== "stats") throw new Error("no stats");
+
+    expect(reply.stats.totalWatchedMs).toBe(90_000);
+    expect(reply.stats.videoCount).toBe(1);
+    expect(reply.stats.buckets).toHaveLength(1);
+    expect(reply.stats.buckets[0].watchedMs).toBe(90_000);
   });
 });

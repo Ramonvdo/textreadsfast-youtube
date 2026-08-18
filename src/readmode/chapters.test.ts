@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  sectionLabel,
   chaptersFrom,
   chaptersFromAttributedDescription,
   chaptersFromDescriptionText,
@@ -388,23 +389,24 @@ describe("chaptersFromTranscript", () => {
     text,
   });
 
-  it("splits at the longest silences and titles from the opening words", () => {
+  it("splits at the longest silences and titles each section", () => {
     const chapters = chaptersFromTranscript(
       [
-        line(0, 1000, "welcome to the show today we discuss"),
+        line(0, 1000, "welcome to the show today we discuss leverage"),
         line(1200, 2000, "the first topic"),
-        // A long pause: a new section.
-        line(9000, 10_000, "moving on to something completely different now"),
-        line(10_200, 11_000, "and more"),
+        // A long pause, and far enough along to clear the minimum spacing.
+        line(90_000, 91_000, "moving on to something completely different now"),
+        line(91_200, 92_000, "and more"),
       ],
-      12_000,
+      180_000,
       3,
     );
 
     expect(chapters).toHaveLength(2);
     expect(chapters[0].startMs).toBe(0);
-    expect(chapters[1].startMs).toBe(9000);
-    expect(chapters[0].title).toContain("welcome");
+    expect(chapters[1].startMs).toBe(90_000);
+    // Titled by the phrase parser, not by the raw opening words.
+    expect(chapters[0].title).toBe("Welcome to the show today we");
   });
 
   it("returns nothing for an empty transcript", () => {
@@ -442,5 +444,100 @@ describe("videoMetaFrom", () => {
       channel: "A",
       durationMs: 0,
     });
+  });
+});
+
+describe("sectionLabel", () => {
+  // The reported case, verbatim. The first seven words of spoken English are
+  // usually the least informative seven.
+  it("finds the phrase inside the scaffolding", () => {
+    expect(
+      sectionLabel("Here are brutally honest truths that nobody tells you"),
+    ).toBe("Brutally honest truths");
+  });
+
+  it("drops the openings people actually say", () => {
+    expect(sectionLabel("So basically the compound effect takes over")).toBe(
+      "Compound effect takes over",
+    );
+    expect(sectionLabel("and I think you know parallel agents work well")).toBe(
+      "Parallel agents work well",
+    );
+    expect(sectionLabel("Um, okay, so leverage is the whole game here")).toBe(
+      "Leverage is the whole game here",
+    );
+  });
+
+  it("stops at a clause boundary rather than running on", () => {
+    expect(
+      sectionLabel("Revenue multipliers decay because the market adjusts"),
+    ).toBe("Revenue multipliers decay");
+  });
+
+  it("stops at punctuation", () => {
+    expect(sectionLabel("Three rules, and here is the first one")).toBe(
+      "Three rules",
+    );
+  });
+
+  it("never ends on a weak word", () => {
+    expect(sectionLabel("Career capital is about the")).toBe("Career capital");
+  });
+
+  it("caps the length", () => {
+    const label = sectionLabel(
+      "compound interest rewards patience discipline consistency focus attention effort",
+    );
+    expect(label.split(/\s+/)).toHaveLength(6);
+  });
+
+  it("falls back rather than returning nothing when it is all filler", () => {
+    expect(sectionLabel("so you know I mean like")).not.toBe("");
+    expect(sectionLabel("")).toBe("");
+  });
+});
+
+describe("chaptersFromTranscript spacing", () => {
+  /*
+   * The reported failure: sections at 2:24 and 2:27. A breath is not a chapter,
+   * and an outline whose entries are three seconds apart is not an outline.
+   */
+  it("refuses sections that are seconds apart", () => {
+    const line = (startMs: number, endMs: number, text: string) => ({
+      startMs,
+      endMs,
+      text,
+    });
+
+    const chapters = chaptersFromTranscript(
+      [
+        line(0, 5_000, "opening remarks about the whole idea"),
+        // A long pause, then two breaks three seconds apart.
+        line(144_000, 146_000, "second section begins here properly"),
+        line(147_000, 149_000, "third would start here far too soon"),
+        line(400_000, 405_000, "much later a genuine new subject appears"),
+      ],
+      600_000,
+    );
+
+    const starts = chapters.map((c) => c.startMs);
+    for (let i = 1; i < starts.length; i += 1) {
+      expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(45_000);
+    }
+    expect(starts).not.toContain(147_000);
+  });
+
+  it("scales the minimum gap with the video length", () => {
+    const lines = Array.from({ length: 40 }, (_, i) => ({
+      startMs: i * 60_000,
+      endMs: i * 60_000 + 1_000,
+      text: `distinct subject number ${i} being discussed`,
+    }));
+    // A two-hour video: the floor becomes duration/25 = 4.8 minutes.
+    const chapters = chaptersFromTranscript(lines, 7_200_000);
+    const starts = chapters.map((c) => c.startMs);
+    for (let i = 1; i < starts.length; i += 1) {
+      expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(288_000);
+    }
   });
 });

@@ -30,6 +30,8 @@ export interface Handlers {
   onSendChat(text: string): void;
   onExport(): void;
   onClose(): void;
+  /** Ask for the summary again. Optional so the harness need not supply it. */
+  onRegenerate?(): void;
 }
 
 export interface ReadModeView {
@@ -422,6 +424,24 @@ export function renderReadMode(
       chat.appendChild(
         el("p", "trf-rm-status trf-rm-status--error", state.message),
       );
+    }
+
+    /*
+     * A cached summary must never be a dead end.
+     *
+     * The summary is reused across visits rather than regenerated, which saves
+     * the tokens — but a stale or disappointing one then has no way out unless
+     * asking again is one click away.
+     */
+    if (
+      handlers.onRegenerate &&
+      state.kind !== "loading" &&
+      next.messages.some((m) => m.role === "assistant" && m.text.trim() !== "")
+    ) {
+      const again = el("button", "trf-rm-again", "Regenerate summary");
+      again.type = "button";
+      again.addEventListener("click", () => handlers.onRegenerate?.());
+      chat.appendChild(again);
     }
 
     send.disabled = state.kind === "loading";

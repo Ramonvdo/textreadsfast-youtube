@@ -18,11 +18,15 @@
 
 import type { ChatMessage, Note } from "../readmode/model";
 import {
+  dayKey,
   SCHEMA_VERSION,
   thumbnailUrl,
   type FullSession,
   type LibraryRequest,
   type LibraryResponse,
+  type ActivityRecord,
+  type Granularity,
+  type LibraryStats,
   type SessionRecord,
   type SessionSummary,
   type TranscriptRecord,
@@ -30,10 +34,11 @@ import {
 
 const DB_NAME = "trf-library";
 
-export type StoreName = "sessions" | "transcripts" | "notes" | "messages";
+export type StoreName =
+  "sessions" | "transcripts" | "notes" | "messages" | "activity";
 
 export type IndexName =
-  "by-updatedAt" | "by-video" | "by-video-time" | "by-video-created";
+  "by-updatedAt" | "by-video" | "by-video-time" | "by-video-created" | "by-day";
 
 /**
  * The primary key of each store, for adapters that have to derive it themselves.
@@ -42,6 +47,7 @@ export type IndexName =
  * warn if it does not, it will simply refuse the write.
  */
 export const KEY_PATHS: Record<StoreName, string> = {
+  activity: "id",
   sessions: "videoId",
   transcripts: "videoId",
   notes: "id",
@@ -60,6 +66,7 @@ export const INDEX_KEY_PATHS: Record<IndexName, readonly string[]> = {
   "by-video": ["videoId"],
   "by-video-time": ["videoId", "atMs"],
   "by-video-created": ["videoId", "createdAt"],
+  "by-day": ["day"],
 };
 
 export interface ScanOptions {
@@ -132,6 +139,14 @@ export type SessionUpsert = Omit<
   | "summaryMarkdown"
   | "noteCount"
   | "messageCount"
+  // Stats belong to `recordActivity`, which accumulates them. An upsert that
+  // carried them would reset the history every time a video was reopened.
+  | "coverage"
+  | "watchedMs"
+  | "openMs"
+  | "openCount"
+  | "lastOpenedAt"
+  | "coveragePct"
 > &
   Partial<
     Pick<
@@ -171,6 +186,21 @@ export const MIGRATIONS: readonly Migration[] = [
 
     const messages = db.createObjectStore("messages", { keyPath: "id" });
     messages.createIndex("by-video-created", ["videoId", "createdAt"]);
+  },
+
+  /**
+   * → v2: study stats.
+   *
+   * Purely additive. The new fields on `sessions` are read with `?? 0` rather
+   * than back-filled, so a v1 session opens unchanged and starts counting from
+   * zero instead of claiming a history it does not have.
+   */
+  (db) => {
+    const activity = db.createObjectStore("activity", { keyPath: "id" });
+    // The overview chart groups by day across every video; the per-video view
+    // filters the same store. One index serves both.
+    activity.createIndex("by-day", "day");
+    activity.createIndex("by-video", "videoId");
   },
 ];
 
@@ -395,6 +425,13 @@ export async function upsertSession(
 
   const record: SessionRecord = {
     schemaVersion: SCHEMA_VERSION,
+    // Carried forward untouched: an upsert knows nothing about them.
+    coverage: existing?.coverage ?? new Uint8Array(0),
+    watchedMs: existing?.watchedMs ?? 0,
+    openMs: existing?.openMs ?? 0,
+    openCount: existing?.openCount ?? 0,
+    lastOpenedAt: existing?.lastOpenedAt ?? 0,
+    coveragePct: existing?.coveragePct ?? 0,
     videoId: incoming.videoId,
     title: incoming.title || existing?.title || "",
     channel: incoming.channel || existing?.channel || "",
@@ -468,6 +505,11 @@ function toSummary(record: SessionRecord): SessionSummary {
     updatedAt: record.updatedAt,
     noteCount: record.noteCount,
     messageCount: record.messageCount,
+    watchedMs: record.watchedMs ?? 0,
+    openMs: record.openMs ?? 0,
+    openCount: record.openCount ?? 0,
+    lastOpenedAt: record.lastOpenedAt ?? 0,
+    coveragePct: record.coveragePct ?? 0,
   };
 }
 
@@ -703,6 +745,17 @@ async function route(
       await setSummary(store, message.videoId, message.summaryMarkdown);
       return { ok: true, type: "void" };
 
+    case "library.recordActivity":
+      await recordActivity(store, message);
+      return { ok: true, type: "void" };
+
+    case "library.stats":
+      return {
+        ok: true,
+        type: "stats",
+        stats: await readStats(store, message.granularity, message.videoId),
+      };
+
     default: {
       // Adding a request to the protocol without handling it here is a compile
       // error rather than a message that quietly does nothing.
@@ -713,6 +766,132 @@ async function route(
       };
     }
   }
+}
+
+/* ── study stats ─────────────────────────────────────────────────────────── */
+
+/**
+ * Merge one flush of activity into the stores.
+ *
+ * Deltas, never totals. Two tabs on the same video add to each other rather
+ * than the later flush overwriting the earlier one, and a crash loses at most
+ * the last unflushed interval instead of the whole session.
+ */
+export async function recordActivity(
+  store: LibraryStore,
+  input: {
+    videoId: string;
+    watchedMs: number;
+    openMs: number;
+    seen: number[];
+    totalBuckets: number;
+    opened: boolean;
+  },
+): Promise<void> {
+  const existing = await store.get<SessionRecord>("sessions", input.videoId);
+  if (!existing) return; // nothing to attach to; the upsert comes first
+
+  /*
+   * Grow, never shrink.
+   *
+   * YouTube's reported duration and the transcript's can disagree, and a
+   * shorter array arriving later must not truncate what was already seen —
+   * losing someone's history to round the numbers off would be the worse bug.
+   */
+  const previous = existing.coverage ?? new Uint8Array(0);
+  const size = Math.max(previous.length, input.totalBuckets, 0);
+  const coverage = new Uint8Array(size);
+  coverage.set(previous);
+  for (const bucket of input.seen) {
+    if (bucket >= 0 && bucket < size) coverage[bucket] = 1;
+  }
+
+  let seenCount = 0;
+  for (const value of coverage) if (value) seenCount += 1;
+
+  await store.put("sessions", {
+    ...existing,
+    schemaVersion: SCHEMA_VERSION,
+    coverage,
+    coveragePct: size > 0 ? seenCount / size : 0,
+    watchedMs: (existing.watchedMs ?? 0) + Math.max(0, input.watchedMs),
+    openMs: (existing.openMs ?? 0) + Math.max(0, input.openMs),
+    openCount: (existing.openCount ?? 0) + (input.opened ? 1 : 0),
+    lastOpenedAt: Date.now(),
+    updatedAt: Date.now(),
+  } satisfies SessionRecord);
+
+  if (input.watchedMs <= 0 && input.openMs <= 0) return;
+
+  const day = dayKey(Date.now());
+  const id = `${input.videoId}:${day}`;
+  const before = await store.get<ActivityRecord>("activity", id);
+
+  await store.put("activity", {
+    id,
+    videoId: input.videoId,
+    day,
+    watchedMs: (before?.watchedMs ?? 0) + Math.max(0, input.watchedMs),
+    openMs: (before?.openMs ?? 0) + Math.max(0, input.openMs),
+  } satisfies ActivityRecord);
+}
+
+/** Monday of the week a local day falls in, as `YYYY-MM-DD`. */
+function weekStart(day: string): string {
+  const date = new Date(`${day}T00:00:00`);
+  // getDay() is 0 for Sunday; shift so weeks start on Monday.
+  const offset = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - offset);
+  return dayKey(date);
+}
+
+function bucketKey(day: string, granularity: Granularity): string {
+  if (granularity === "day") return day;
+  if (granularity === "week") return weekStart(day);
+  return `${day.slice(0, 7)}-01`;
+}
+
+/**
+ * Totals and a time series.
+ *
+ * Reads `activity` and `sessions` only — never `transcripts`, which is the
+ * whole reason the transcript lives in its own store.
+ */
+export async function readStats(
+  store: LibraryStore,
+  granularity: Granularity,
+  videoId?: string,
+): Promise<LibraryStats> {
+  const activity = videoId
+    ? await store.byIndex<ActivityRecord>("activity", "by-video", videoId)
+    : await store.scanIndex<ActivityRecord>("activity", "by-day");
+
+  const totals = new Map<string, { watchedMs: number; openMs: number }>();
+  for (const entry of activity) {
+    const key = bucketKey(entry.day, granularity);
+    const bucket = totals.get(key) ?? { watchedMs: 0, openMs: 0 };
+    bucket.watchedMs += entry.watchedMs ?? 0;
+    bucket.openMs += entry.openMs ?? 0;
+    totals.set(key, bucket);
+  }
+
+  const sessions = await store.scanIndex<SessionRecord>(
+    "sessions",
+    "by-updatedAt",
+  );
+  const scoped = videoId
+    ? sessions.filter((session) => session.videoId === videoId)
+    : sessions;
+
+  return {
+    totalWatchedMs: scoped.reduce((sum, s) => sum + (s.watchedMs ?? 0), 0),
+    totalOpenMs: scoped.reduce((sum, s) => sum + (s.openMs ?? 0), 0),
+    videoCount: scoped.length,
+    noteCount: scoped.reduce((sum, s) => sum + (s.noteCount ?? 0), 0),
+    buckets: [...totals.entries()]
+      .map(([key, value]) => ({ key, ...value }))
+      .sort((a, b) => a.key.localeCompare(b.key)),
+  };
 }
 
 /**

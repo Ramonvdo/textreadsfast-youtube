@@ -18,10 +18,20 @@ import {
 } from "../readmode/model";
 import type {
   FullSession,
+  Granularity,
   LibraryRequest,
   LibraryResponse,
+  LibraryStats,
   SessionSummary,
 } from "../shared/libraryProtocol";
+import {
+  formatDuration,
+  renderBarChart,
+  renderCoverageBar,
+  renderStatTile,
+  shortDayLabel,
+  type Bar,
+} from "./charts";
 
 const grid = document.getElementById("grid") as HTMLUListElement;
 const detail = document.getElementById("detail") as HTMLDivElement;
@@ -31,6 +41,7 @@ const search = document.getElementById("search") as HTMLInputElement;
 const count = document.getElementById("count") as HTMLSpanElement;
 
 let sessions: SessionSummary[] = [];
+let granularity: Granularity = "day";
 
 /* ── messaging ──────────────────────────────────────────────────────────── */
 
@@ -127,6 +138,81 @@ function renderMarkdown(text: string): DocumentFragment {
   }
 
   return frag;
+}
+
+/* ── stats ──────────────────────────────────────────────────────────────── */
+
+function labelFor(key: string, unit: Granularity): string {
+  if (unit === "day") return shortDayLabel(key);
+  if (unit === "week") return key.slice(5).replace("-", "/");
+  return new Date(`${key}T00:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+  });
+}
+
+function toBars(stats: LibraryStats, unit: Granularity): Bar[] {
+  return stats.buckets.map((bucket) => ({
+    key: bucket.key,
+    value: bucket.watchedMs,
+    label: labelFor(bucket.key, unit),
+  }));
+}
+
+/** The overview: what has been studied, and when. */
+async function paintOverview(): Promise<void> {
+  const host = document.getElementById("overview");
+  if (!host) return;
+
+  const reply = await send({ type: "library.stats", granularity });
+  if (!reply.ok || reply.type !== "stats") {
+    host.replaceChildren();
+    return;
+  }
+  const stats = reply.stats;
+
+  host.replaceChildren();
+
+  const tiles = el("div", "tiles");
+  tiles.append(
+    renderStatTile("Time watched", formatDuration(stats.totalWatchedMs)),
+    renderStatTile(
+      "Time in read mode",
+      formatDuration(stats.totalOpenMs),
+      "including time paused writing notes",
+    ),
+    renderStatTile("Videos studied", String(stats.videoCount)),
+    renderStatTile("Notes taken", String(stats.noteCount)),
+  );
+  host.appendChild(tiles);
+
+  const panel = el("section", "chart-panel");
+  const head = el("div", "chart-head");
+  head.appendChild(el("h3", undefined, "Time watched"));
+
+  const picker = el("div", "granularity");
+  for (const unit of ["day", "week", "month"] as Granularity[]) {
+    const button = el("button", undefined, unit);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(unit === granularity));
+    button.addEventListener("click", () => {
+      granularity = unit;
+      void paintOverview();
+    });
+    picker.appendChild(button);
+  }
+  head.appendChild(picker);
+  panel.appendChild(head);
+
+  const bars = toBars(stats, granularity);
+  if (bars.length === 0) {
+    panel.appendChild(
+      el("p", "muted", "Nothing recorded yet. Watch a video in read mode."),
+    );
+  } else {
+    panel.appendChild(renderBarChart(bars));
+  }
+
+  host.appendChild(panel);
 }
 
 /* ── the grid ───────────────────────────────────────────────────────────── */
@@ -312,6 +398,62 @@ async function openDetail(videoId: string): Promise<void> {
   actions.append(open, exportBtn, remove);
   detail.appendChild(actions);
 
+  /*
+   * What this video actually cost, and how much of it was seen.
+   *
+   * Coverage is the honest one: rewatching the same thirty seconds moves the
+   * watch time but not this, which is exactly the difference between effort
+   * and retention.
+   */
+  const statsBlock = el("section", "block");
+  statsBlock.appendChild(el("h3", undefined, "Study"));
+
+  const tiles = el("div", "tiles");
+  tiles.append(
+    renderStatTile("Watched", formatDuration(session.watchedMs ?? 0)),
+    renderStatTile("In read mode", formatDuration(session.openMs ?? 0)),
+    renderStatTile(
+      "Opened",
+      `${session.openCount ?? 0}×`,
+      (session.openCount ?? 0) > 1
+        ? "summary reused, not regenerated"
+        : undefined,
+    ),
+    renderStatTile(
+      "Coverage",
+      `${Math.round((session.coveragePct ?? 0) * 100)}%`,
+      "of the timeline seen",
+    ),
+  );
+  statsBlock.appendChild(tiles);
+
+  if (session.coverage && session.coverage.length > 0) {
+    const strip = el("div", "coverage");
+    strip.appendChild(renderCoverageBar(session.coverage));
+    strip.appendChild(
+      el("p", "muted", "Filled where you have watched, left to right."),
+    );
+    statsBlock.appendChild(strip);
+  }
+
+  const perVideo = await send({
+    type: "library.stats",
+    granularity: "day",
+    videoId: session.videoId,
+  });
+  if (
+    perVideo.ok &&
+    perVideo.type === "stats" &&
+    perVideo.stats.buckets.length > 1
+  ) {
+    const panel = el("section", "chart-panel");
+    panel.appendChild(el("h3", undefined, "Sessions by day"));
+    panel.appendChild(renderBarChart(toBars(perVideo.stats, "day"), 72));
+    statsBlock.appendChild(panel);
+  }
+
+  detail.appendChild(statsBlock);
+
   if (session.summaryMarkdown) {
     const block = el("section", "block");
     block.appendChild(el("h3", undefined, "Summary"));
@@ -376,6 +518,7 @@ async function main(): Promise<void> {
 
   sessions = reply.sessions;
   paintGrid();
+  void paintOverview();
 
   let debounce = 0;
   search.addEventListener("input", () => {

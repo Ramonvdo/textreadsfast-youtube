@@ -492,6 +492,21 @@ html.trf-rm-open body {
   color-scheme: light;
 }
 
+/* Deliberately plain: asking again should be available, not advertised. */
+.trf-rm-again {
+  margin-top: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--trf-rm-body) 28%, transparent);
+  font-size: 10.5px;
+  color: var(--trf-rm-body);
+}
+
+.trf-rm-again:hover {
+  border-color: var(--trf-rm-slate);
+  color: var(--trf-rm-ink);
+}
+
 .trf-rm-status {
   margin: 0;
   font-size: 11px;
@@ -609,19 +624,12 @@ html.trf-rm-open body {
   display: none;
 }
 
-.trf-rm[data-focus="true"] .trf-rm-grid {
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  padding-left: 24px;
-}
-
 .trf-rm[data-focus="true"] .trf-rm-main {
-  grid-column: 1;
-  width: min(1400px, 100%);
-}
-
-.trf-rm[data-focus="true"] .trf-rm-stage {
-  width: min(100%, calc((100vh - 300px) * 16 / 9));
+  grid-column: 1 / -1;
+  /* Exactly the 1087 of 1868 the column normally gets, so the video and the
+     note box do not move a pixel. Focus mode removes panes; it does not rescale
+     the surface you are working on. */
+  width: calc(100% * 1087 / 1868);
   margin: 0 auto;
 }
 

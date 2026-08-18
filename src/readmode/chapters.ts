@@ -316,6 +316,293 @@ export interface TranscriptLine {
  * a summary of what is said there rather than an authored chapter name, which is
  * why the view labels this source differently.
  */
+/**
+ * Words a section title should never begin with.
+ *
+ * Speech opens with scaffolding — "so", "here are", "and I think" — and the
+ * first seven words of a sentence are therefore usually the least informative
+ * seven. Stripping these is what turns "Here are brutally honest truths" into
+ * "Brutally honest truths".
+ */
+const LEADING_NOISE = new Set([
+  "so",
+  "and",
+  "but",
+  "or",
+  "okay",
+  "ok",
+  "now",
+  "well",
+  "right",
+  "um",
+  "uh",
+  "er",
+  "ah",
+  "oh",
+  "yeah",
+  "yes",
+  "no",
+  "like",
+  "basically",
+  "actually",
+  "literally",
+  "obviously",
+  "honestly",
+  "look",
+  "listen",
+  "see",
+  "here",
+  "there",
+  "this",
+  "that",
+  "these",
+  "those",
+  "it",
+  "its",
+  "we",
+  "our",
+  "us",
+  "they",
+  "their",
+  "i",
+  "my",
+  "me",
+  "you",
+  "your",
+  "he",
+  "she",
+  "is",
+  "are",
+  "was",
+  "were",
+  "am",
+  "be",
+  "been",
+  "being",
+  "the",
+  "a",
+  "an",
+  "of",
+  "to",
+  "in",
+  "on",
+  "at",
+  "for",
+  "with",
+  "get",
+  "got",
+  "going",
+  "gonna",
+  "wanna",
+  "really",
+  "just",
+  "very",
+  "kind",
+  "sort",
+  "know",
+  "mean",
+  "let",
+  "lets",
+  "if",
+  "when",
+  "what",
+  "how",
+  "why",
+  "who",
+  "all",
+  "one",
+  "two",
+  "first",
+  "then",
+  "also",
+  "again",
+  "because",
+  "as",
+  "up",
+  "out",
+  "do",
+  "does",
+  "did",
+  "have",
+  "has",
+  "had",
+  "can",
+  "will",
+  "would",
+  "could",
+  "should",
+]);
+
+/** Where a title should stop: everything after is a subordinate clause. */
+const BOUNDARY = new Set([
+  "that",
+  "which",
+  "who",
+  "whom",
+  "whose",
+  "because",
+  "so",
+  "but",
+  "and",
+  "when",
+  "if",
+  "while",
+  "where",
+  "than",
+  "as",
+  "since",
+  "though",
+  "although",
+  "unless",
+  "until",
+  "or",
+]);
+
+/**
+ * Words not worth ending a title on.
+ *
+ * Written out rather than derived from `LEADING_NOISE`, because the two lists
+ * disagree on particles: "up", "out" and "over" are noise at the start of a
+ * sentence and load-bearing at the end of one — trimming them turns "takes
+ * over" into "takes".
+ */
+const WEAK_TAIL = new Set([
+  "the",
+  "a",
+  "an",
+  "of",
+  "to",
+  "in",
+  "on",
+  "at",
+  "for",
+  "with",
+  "about",
+  "from",
+  "into",
+  "by",
+  "and",
+  "or",
+  "but",
+  "is",
+  "are",
+  "was",
+  "were",
+  "am",
+  "be",
+  "been",
+  "being",
+  "that",
+  "this",
+  "these",
+  "those",
+  "it",
+  "its",
+  "my",
+  "your",
+  "our",
+  "their",
+  "his",
+  "her",
+  "not",
+  "no",
+  "more",
+  "most",
+  "some",
+  "any",
+  "every",
+  "each",
+  "other",
+  "another",
+  "very",
+  "really",
+  "just",
+  "so",
+  "as",
+  "than",
+  "then",
+  "also",
+  "kind",
+  "sort",
+  "like",
+]);
+
+const bare = (word: string): string =>
+  word.toLowerCase().replace(/[^a-z0-9']/g, "");
+
+/**
+ * Multiword fillers, removed before anything else.
+ *
+ * Word-by-word stripping cannot catch these: it halts at the first word it does
+ * not recognise, so "and I think you know parallel agents" stops on "think" and
+ * keeps "you know" in the title. Taking the phrases out first leaves a clean
+ * sentence for the remaining passes to work on.
+ */
+const FILLER_PHRASES =
+  /\b(?:you know|i mean|i think|i guess|i would say|to be honest|if that makes sense|at the end of the day|sort of|kind of|like i said|or whatever|and stuff|things like that)\b/gi;
+
+/**
+ * A readable title for a stretch of speech.
+ *
+ * Heuristic, and only ever used where the alternative is a raw sentence
+ * fragment: a video with real chapters never reaches this. Three passes — drop
+ * the opening scaffolding, stop at the first clause boundary, trim a weak
+ * ending — which is enough to turn most spoken openings into a noun phrase.
+ */
+export function sectionLabel(text: string): string {
+  const cleaned = text.replace(FILLER_PHRASES, " ").replace(/\s+/g, " ").trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "";
+
+  let start = 0;
+  while (start < words.length && LEADING_NOISE.has(bare(words[start])))
+    start += 1;
+
+  // Everything was scaffolding: fall back rather than returning nothing.
+  if (start >= words.length) start = 0;
+
+  const kept: string[] = [];
+  for (let i = start; i < words.length && kept.length < 6; i += 1) {
+    const word = words[i];
+    // A clause boundary ends the title, but never before it has any content.
+    if (kept.length > 0 && BOUNDARY.has(bare(word))) break;
+    kept.push(word);
+    // Punctuation inside the word ends it too: the sentence moved on.
+    if (/[,;:.?!]/.test(word)) break;
+  }
+
+  while (kept.length > 1 && WEAK_TAIL.has(bare(kept[kept.length - 1])))
+    kept.pop();
+
+  const title = kept
+    .join(" ")
+    .replace(/[\s,;:.?!]+$/, "")
+    .trim();
+
+  // Too little survived to mean anything; the raw opening is more use.
+  if (title.split(/\s+/).filter(Boolean).length < 2) {
+    const fallback = words
+      .slice(0, 5)
+      .join(" ")
+      .replace(/[\s,;:.?!]+$/, "");
+    return capitalise(fallback);
+  }
+
+  return capitalise(title);
+}
+
+function capitalise(text: string): string {
+  return text.length === 0 ? text : text[0].toUpperCase() + text.slice(1);
+}
+
+/**
+ * Sections derived from the transcript, for videos with no chapters at all.
+ *
+ * Split at the longest silences, which is where a speaker most often changes
+ * subject — but never closer together than `minGap`. Without that rule a breath
+ * in the middle of a sentence becomes a chapter, and the outline ends up with
+ * entries three seconds apart, which is a pause rather than a section.
+ */
 export function chaptersFromTranscript(
   lines: TranscriptLine[],
   durationMs: number,
@@ -323,43 +610,49 @@ export function chaptersFromTranscript(
 ): Chapter[] {
   if (lines.length === 0) return [];
 
-  const gaps = lines
+  const minGap = Math.max(45_000, durationMs > 0 ? durationMs / 25 : 0);
+
+  const candidates = lines
     .slice(1)
     .map((line, index) => ({
       index: index + 1,
+      startMs: line.startMs,
       gap: line.startMs - lines[index].endMs,
     }))
     .filter((entry) => entry.gap > 400)
-    .sort((a, b) => b.gap - a.gap)
-    .slice(0, Math.max(0, max - 1))
-    .map((entry) => entry.index)
-    .sort((a, b) => a - b);
+    .sort((a, b) => b.gap - a.gap);
 
-  const boundaries = [0, ...gaps];
+  // Greedy over the longest silences, skipping any that fall too close to a
+  // boundary already taken. Longest-first means the strongest breaks win the
+  // space rather than whichever happened to come earliest.
+  const taken: Array<{ index: number; startMs: number }> = [
+    { index: 0, startMs: lines[0].startMs },
+  ];
+
+  for (const entry of candidates) {
+    if (taken.length >= max) break;
+    if (taken.some((t) => Math.abs(entry.startMs - t.startMs) < minGap))
+      continue;
+    taken.push({ index: entry.index, startMs: entry.startMs });
+  }
+
+  const boundaries = taken.map((t) => t.index).sort((a, b) => a - b);
   const chapters: Chapter[] = [];
 
   for (let i = 0; i < boundaries.length; i += 1) {
     const from = boundaries[i];
     const to = i + 1 < boundaries.length ? boundaries[i + 1] : lines.length;
-    const words = lines
+    const text = lines
       .slice(from, to)
       .map((line) => line.text)
-      .join(" ")
-      .split(/\s+/)
-      .filter(Boolean);
+      .join(" ");
 
-    if (words.length === 0) continue;
-
-    const title = words.slice(0, 7).join(" ");
-    chapters.push({
-      title: words.length > 7 ? `${title}…` : title,
-      startMs: lines[from].startMs,
-    });
+    const title = sectionLabel(text);
+    if (title) chapters.push({ title, startMs: lines[from].startMs });
   }
 
   // A single section is not an outline; better to show none and say so.
   if (chapters.length < 2) return [];
-  void durationMs;
   return clean(chapters);
 }
 
