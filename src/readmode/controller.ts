@@ -45,6 +45,11 @@ export interface ReadModeContext {
   chapterSource: ReadModeModel["chapterSource"];
   /** Re-run the RSVP reader's draw, since a resize alone will not. */
   redrawReader?: () => void;
+  /** Whether the word stream starts drawn over the video. */
+  subtitles: boolean;
+  /** Apply and persist a change to that. Owned by the content script, which is
+   *  the only place that holds both the reader session and the settings. */
+  onSubtitlesChange?: (on: boolean) => void;
 }
 
 interface Session {
@@ -355,6 +360,7 @@ export async function openReadMode(
     currentMs: ctx.video.currentTime * 1000,
     chapters: chaptersWithEnds(ctx.chapters, ctx.durationMs),
     chapterSource: ctx.chapterSource,
+    subtitles: ctx.subtitles,
   };
 
   const view = renderReadMode(model, {
@@ -406,6 +412,10 @@ export async function openReadMode(
     onExport: () => {
       if (!session) return;
       exportNotes(session.model);
+    },
+    onToggleSubtitles: (on) => {
+      setModel({ subtitles: on });
+      ctx.onSubtitlesChange?.(on);
     },
     onClose: () => void closeReadMode(),
     onRegenerate: () => {

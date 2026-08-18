@@ -64,6 +64,8 @@ export interface ReadModeModel {
   currentMs: number;
   chapters: Chapter[];
   chapterSource: ChapterSource;
+  /** Whether the RSVP word stream is drawn over the video. */
+  subtitles: boolean;
   notes: Note[];
   messages: ChatMessage[];
   chat: ChatState;
@@ -78,6 +80,7 @@ export function emptyModel(videoId: string): ReadModeModel {
     currentMs: 0,
     chapters: [],
     chapterSource: "none",
+    subtitles: true,
     notes: [],
     messages: [],
     chat: { kind: "idle" },

@@ -59,6 +59,7 @@ async function main(): Promise<void> {
     onDeleteNote: () => undefined,
     onSendChat: () => undefined,
     onExport: () => undefined,
+    onToggleSubtitles: () => undefined,
     onClose: () => undefined,
   });
 

@@ -10,6 +10,7 @@ function handlers(): Handlers {
     onDeleteNote: vi.fn(),
     onSendChat: vi.fn(),
     onExport: vi.fn(),
+    onToggleSubtitles: vi.fn(),
     onClose: vi.fn(),
   };
 }
@@ -200,6 +201,39 @@ describe("notes", () => {
 
     button.click();
     expect(h.onExport).toHaveBeenCalled();
+  });
+});
+
+describe("subtitles", () => {
+  const subs = (view: { root: HTMLElement }) =>
+    view.root.querySelector<HTMLButtonElement>(".trf-rm-subs")!;
+
+  it("starts on", () => {
+    const view = renderReadMode(model(), handlers());
+    expect(subs(view).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  // The button reports the change; it does not decide it. The setting is the
+  // single source of truth, so the view waits to be told.
+  it("asks for the opposite of what is showing", () => {
+    const h = handlers();
+    const view = renderReadMode(model(), h);
+
+    subs(view).click();
+    expect(h.onToggleSubtitles).toHaveBeenCalledWith(false);
+
+    view.update(model({ subtitles: false }));
+    expect(subs(view).getAttribute("aria-pressed")).toBe("false");
+
+    subs(view).click();
+    expect(h.onToggleSubtitles).toHaveBeenLastCalledWith(true);
+  });
+
+  it("says what it does, in both states", () => {
+    const view = renderReadMode(model(), handlers());
+    expect(subs(view).getAttribute("aria-label")).toContain("Hide");
+    view.update(model({ subtitles: false }));
+    expect(subs(view).getAttribute("aria-label")).toContain("Show");
   });
 });
 

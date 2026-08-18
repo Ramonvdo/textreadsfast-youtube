@@ -277,6 +277,7 @@ html.trf-rm-open body {
 }
 
 /* Round, quiet, and the same height as the export pill beside it. */
+.trf-rm-subs,
 .trf-rm-focus {
   display: grid;
   place-items: center;
@@ -287,16 +288,21 @@ html.trf-rm-open body {
   background: color-mix(in srgb, var(--trf-rm-pill) 65%, transparent);
 }
 
+.trf-rm-subs:hover,
 .trf-rm-focus:hover {
   background: var(--trf-rm-pill);
   color: var(--trf-rm-ink);
 }
 
+/* Subtitles are filled when ON; focus is filled when ON. Both read as "this is
+   currently doing something", which is the state worth marking. */
+.trf-rm-subs[aria-pressed="true"],
 .trf-rm-focus[aria-pressed="true"] {
   background: var(--trf-rm-slate);
   color: #fff;
 }
 
+.trf-rm-subs svg,
 .trf-rm-focus svg {
   width: 16px;
   height: 16px;

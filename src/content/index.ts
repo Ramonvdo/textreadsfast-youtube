@@ -33,6 +33,7 @@ import {
   DEFAULTS,
   loadSettings,
   onSettingsChanged,
+  saveSettings,
   type Settings,
 } from "../settings";
 
@@ -466,7 +467,16 @@ async function enterOrLeaveReadMode(): Promise<{
   const reader = session
     ? { words: session.words, video: session.video, redraw: session.redraw }
     : null;
-  const result = await toggleReadMode(reader, await summaryPrompt());
+  const result = await toggleReadMode(reader, await summaryPrompt(), {
+    on: settings.readerInReadMode,
+    onChange: (on) => {
+      // One source of truth: the button writes the same setting the options
+      // page does, so the two can never disagree about whether the reader runs.
+      readerSuppressed = on ? false : isReadModeOpen();
+      session?.redraw();
+      void saveSettings({ readerInReadMode: on });
+    },
+  });
 
   // The reader travels with the player into read mode for free, because
   // `.trf-reader` is mounted inside `#movie_player`. Honouring the setting is

@@ -5,6 +5,7 @@
   "durationMs": 1425000,
   "currentMs": 621000,
   "chapterSource": "description",
+  "subtitles": true,
   "chapters": [
     { "title": "Intro: The AI Employee Map", "startMs": 0 },
     {

@@ -32,6 +32,8 @@ export interface Handlers {
   onClose(): void;
   /** Ask for the summary again. Optional so the harness need not supply it. */
   onRegenerate?(): void;
+  /** Turn the word stream over the video on or off. */
+  onToggleSubtitles(on: boolean): void;
 }
 
 export interface ReadModeView {
@@ -74,6 +76,8 @@ const TRASH = "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6";
 const ARROW_UP = "M12 19V5M5 12l7-7 7 7";
 const EYE =
   "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z";
+const CAPTIONS = "M3 5h18v14H3z M7 11h4 M13 11h4 M7 15h10";
+const CAPTIONS_OFF = "M3 5h18v14H3z M7 11h4 M13 11h4 M7 15h10 M3 3l18 18";
 const EYE_OFF =
   "M10.7 5.1A11 11 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.8 3.7 M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a10.6 10.6 0 0 0 4.5-1 M3 3l18 18 M9.9 9.9a3 3 0 0 0 4.2 4.2";
 
@@ -238,12 +242,34 @@ export function renderReadMode(
     paintFocus();
   });
 
+  /*
+   * The word stream over the video.
+   *
+   * Backed by the `readerInReadMode` setting rather than by state of its own,
+   * so this button and the settings page can never disagree about whether the
+   * reader is running.
+   */
+  const subsBtn = el("button", "trf-rm-subs");
+  subsBtn.type = "button";
+  subsBtn.addEventListener("click", () =>
+    handlers.onToggleSubtitles(!current.subtitles),
+  );
+
+  const paintSubs = (on: boolean): void => {
+    subsBtn.setAttribute("aria-pressed", String(on));
+    subsBtn.title = on
+      ? "Hide the subtitles over the video"
+      : "Show the subtitles over the video";
+    subsBtn.setAttribute("aria-label", subsBtn.title);
+    subsBtn.replaceChildren(svg(on ? CAPTIONS : CAPTIONS_OFF));
+  };
+
   const exportBtn = el("button", "trf-rm-export", "export");
   exportBtn.type = "button";
   exportBtn.addEventListener("click", () => handlers.onExport());
 
   const notesActions = el("div", "trf-rm-noteactions");
-  notesActions.append(focusBtn, exportBtn);
+  notesActions.append(subsBtn, focusBtn, exportBtn);
   notesHead.append(notesTitle, notesActions);
 
   const noteInput = el("input", "trf-rm-noteinput");
@@ -468,6 +494,7 @@ export function renderReadMode(
             : "";
     navNote.hidden = navNote.textContent === "";
 
+    paintSubs(next.subtitles);
     paintChapters(next, structural);
     if (previous === null || previous.notes !== next.notes) paintNotes(next);
     if (

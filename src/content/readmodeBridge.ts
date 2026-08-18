@@ -85,6 +85,7 @@ export interface ToggleResult {
 export async function toggleReadMode(
   reader: ReaderSession | null,
   summaryPrompt: string,
+  subtitles: { on: boolean; onChange: (on: boolean) => void },
 ): Promise<ToggleResult> {
   if (isReadModeOpen()) {
     const closed = await closeReadMode();
@@ -135,6 +136,8 @@ export async function toggleReadMode(
       chapters,
       chapterSource,
       redrawReader: reader.redraw,
+      subtitles: subtitles.on,
+      onSubtitlesChange: subtitles.onChange,
     },
     summaryPrompt,
   );
