@@ -70,6 +70,10 @@ function svg(path: string, viewBox = "0 0 24 24"): SVGSVGElement {
 
 const TRASH = "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6";
 const ARROW_UP = "M12 19V5M5 12l7-7 7 7";
+const EYE =
+  "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z";
+const EYE_OFF =
+  "M10.7 5.1A11 11 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.8 3.7 M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a10.6 10.6 0 0 0 4.5-1 M3 3l18 18 M9.9 9.9a3 3 0 0 0 4.2 4.2";
 
 /* ── a deliberately small markdown renderer ─────────────────────────────── */
 
@@ -200,10 +204,45 @@ export function renderReadMode(
 
   const notesHead = el("div", "trf-rm-noteshead");
   const notesTitle = el("h2", undefined, "Notetaking:");
+
+  /*
+   * Focus mode: hide the chapters and the assistant, leaving the video and your
+   * own notes.
+   *
+   * Kept as view-local state rather than put on the model, because it changes
+   * nothing about the video, the notes or the conversation — it is only about
+   * what is on screen right now. `paint` never touches this attribute, so an
+   * update cannot silently drop out of it.
+   */
+  let focused = false;
+  const focusBtn = el("button", "trf-rm-focus");
+  focusBtn.type = "button";
+
+  const paintFocus = (): void => {
+    root.dataset.focus = String(focused);
+    focusBtn.setAttribute("aria-pressed", String(focused));
+    focusBtn.title = focused
+      ? "Show chapters and assistant"
+      : "Hide everything but the video";
+    focusBtn.setAttribute("aria-label", focusBtn.title);
+    focusBtn.replaceChildren(svg(focused ? EYE_OFF : EYE));
+    // The player's own observer follows the slot, so the video resizes itself;
+    // this only re-measures what the chat column is aligned against.
+    sync();
+  };
+
+  focusBtn.addEventListener("click", () => {
+    focused = !focused;
+    paintFocus();
+  });
+
   const exportBtn = el("button", "trf-rm-export", "export");
   exportBtn.type = "button";
   exportBtn.addEventListener("click", () => handlers.onExport());
-  notesHead.append(notesTitle, exportBtn);
+
+  const notesActions = el("div", "trf-rm-noteactions");
+  notesActions.append(focusBtn, exportBtn);
+  notesHead.append(notesTitle, notesActions);
 
   const noteInput = el("input", "trf-rm-noteinput");
   noteInput.type = "text";
@@ -457,6 +496,9 @@ export function renderReadMode(
   geometry?.observe(stage);
   geometry?.observe(noteInput);
   geometry?.observe(notesHead);
+
+  // Called here, not at construction: it uses `sync`, which is defined above it.
+  paintFocus();
 
   return {
     root,

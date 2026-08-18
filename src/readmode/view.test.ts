@@ -203,6 +203,49 @@ describe("notes", () => {
   });
 });
 
+describe("focus mode", () => {
+  const focus = (view: { root: HTMLElement }) =>
+    view.root.querySelector<HTMLButtonElement>(".trf-rm-focus")!;
+
+  it("starts off", () => {
+    const view = renderReadMode(model(), handlers());
+    expect(view.root.dataset.focus).toBe("false");
+    expect(focus(view).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("toggles both ways", () => {
+    const view = renderReadMode(model(), handlers());
+    focus(view).click();
+    expect(view.root.dataset.focus).toBe("true");
+    expect(focus(view).getAttribute("aria-pressed")).toBe("true");
+
+    focus(view).click();
+    expect(view.root.dataset.focus).toBe("false");
+  });
+
+  // It is presentation, not data — so a model change must not quietly drop the
+  // reader back out of it mid-video.
+  it("survives an update", () => {
+    const view = renderReadMode(model(), handlers());
+    focus(view).click();
+
+    view.update(
+      model({
+        notes: [{ id: "n", atMs: 0, text: "still focused", createdAt: 1 }],
+        chat: { kind: "loading" },
+      }),
+    );
+    expect(view.root.dataset.focus).toBe("true");
+  });
+
+  it("says what it does, in both states", () => {
+    const view = renderReadMode(model(), handlers());
+    expect(focus(view).getAttribute("aria-label")).toContain("Hide");
+    focus(view).click();
+    expect(focus(view).getAttribute("aria-label")).toContain("Show");
+  });
+});
+
 describe("chat", () => {
   it("sends on Enter but not on Shift+Enter", () => {
     const h = handlers();

@@ -123,6 +123,10 @@ def main() -> None:
             page.wait_for_function("() => window.__ready === true", timeout=15000)
             page.screenshot(path=os.path.join(OUT_DIR, "readmode-needs-key.png"))
 
+            page.goto(f"http://127.0.0.1:{port}/harness.html?state=focus")
+            page.wait_for_function("() => window.__ready === true", timeout=15000)
+            page.screenshot(path=os.path.join(OUT_DIR, "readmode-focus.png"))
+
             browser.close()
     finally:
         httpd.shutdown()

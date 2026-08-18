@@ -64,6 +64,12 @@ async function main(): Promise<void> {
 
   view.playerSlot.appendChild(placeholder());
   document.body.appendChild(view.root);
+
+  // `?state=focus` clicks the focus toggle, so that mode gets screenshotted
+  // rather than only reasoned about.
+  if (wanted === "focus") {
+    view.root.querySelector<HTMLButtonElement>(".trf-rm-focus")?.click();
+  }
   document.title = `${model.title} — Read Mode harness`;
 
   await document.fonts.ready;

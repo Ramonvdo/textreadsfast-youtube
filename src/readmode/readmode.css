@@ -269,6 +269,40 @@ html.trf-rm-open body {
   letter-spacing: -0.01em;
 }
 
+.trf-rm-noteactions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Round, quiet, and the same height as the export pill beside it. */
+.trf-rm-focus {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--trf-rm-slate);
+  background: color-mix(in srgb, var(--trf-rm-pill) 65%, transparent);
+}
+
+.trf-rm-focus:hover {
+  background: var(--trf-rm-pill);
+  color: var(--trf-rm-ink);
+}
+
+.trf-rm-focus[aria-pressed="true"] {
+  background: var(--trf-rm-slate);
+  color: #fff;
+}
+
+.trf-rm-focus svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 .trf-rm-export {
   flex: none;
   padding: 6px 24px;
@@ -558,6 +592,48 @@ html.trf-rm-open body {
   width: 15px;
   height: 15px;
   display: block;
+}
+
+/* ── focus mode ─────────────────────────────────────────────────────────── */
+
+/*
+ * Everything but the video and your own notes goes away.
+ *
+ * The video column is centred and allowed to grow, but the stage is capped
+ * against the viewport height so the note box and at least a couple of pills
+ * stay on screen — a focus mode that pushes your notes below the fold has
+ * removed the wrong thing.
+ */
+.trf-rm[data-focus="true"] .trf-rm-nav,
+.trf-rm[data-focus="true"] .trf-rm-side {
+  display: none;
+}
+
+.trf-rm[data-focus="true"] .trf-rm-grid {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  padding-left: 24px;
+}
+
+.trf-rm[data-focus="true"] .trf-rm-main {
+  grid-column: 1;
+  width: min(1400px, 100%);
+}
+
+.trf-rm[data-focus="true"] .trf-rm-stage {
+  width: min(100%, calc((100vh - 300px) * 16 / 9));
+  margin: 0 auto;
+}
+
+/* The note rows keep their timestamp gutter, which only works while there is
+   room to the left of the pills for it to sit in. */
+.trf-rm[data-focus="true"] .trf-rm-notelist {
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.trf-rm[data-focus="true"] .trf-rm-note {
+  grid-template-columns: 60px 1fr;
 }
 
 /* ── exit ───────────────────────────────────────────────────────────────── */
