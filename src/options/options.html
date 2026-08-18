@@ -119,8 +119,10 @@
         text-align: right;
       }
 
-      /* The preview carries its own reader palette so the theme picker shows
-         the truth rather than the page's colours. */
+      /* The preview carries its own reader palette, so the theme picker shows
+         the truth rather than the page's colours. It is a panel on a page
+         rather than an overlay on a player, so the positioning the reader uses
+         over video is neutralised here. */
       #preview {
         position: relative;
         margin: 0 0 8px;
@@ -128,6 +130,7 @@
         transform: none;
         left: auto;
         bottom: auto;
+        width: 100%;
         max-width: none;
       }
 

@@ -73,3 +73,47 @@ export function pivotOffsetCh(word: string): number {
   if (!word) return 0;
   return -(orpIndex(word) + 0.5);
 }
+
+/**
+ * How far a word reaches either side of the focal column.
+ *
+ * `left` is negative, `right` positive, both measured from the column. Context
+ * words need this: the focus word is centred on its *pivot letter*, not on
+ * itself, so how far it extends depends on where that letter falls. Placing
+ * neighbours a fixed distance from the column instead makes long words collide
+ * with them — "brain uses to" renders as "brainusesto" with the pivot word
+ * painted over both sides.
+ */
+export interface WordExtent {
+  left: number;
+  right: number;
+}
+
+/** Extent in `ch`, for monospace faces. */
+export function wordExtentCh(word: string): WordExtent {
+  if (!word) return { left: 0, right: 0 };
+  const left = pivotOffsetCh(word);
+  return { left, right: left + [...word].length };
+}
+
+/** Extent in CSS pixels, for proportional faces. */
+export function wordExtentPx(
+  word: string,
+  font: string,
+  letterSpacingPx: number,
+): WordExtent {
+  if (!word) return { left: 0, right: 0 };
+  const left = pivotOffsetPx(word, font, letterSpacingPx);
+
+  const key = `w|${font}|${letterSpacingPx}|${word}`;
+  let width = cache.get(key);
+  if (width === undefined) {
+    const c = context();
+    if (!c) return { left, right: left };
+    c.font = font;
+    width = c.measureText(word).width + letterSpacingPx * Math.max(0, [...word].length - 1);
+    if (cache.size >= CACHE_LIMIT) cache.clear();
+    cache.set(key, width);
+  }
+  return { left, right: left + width };
+}

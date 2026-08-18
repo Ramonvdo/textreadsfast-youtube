@@ -10,13 +10,34 @@
  */
 
 import { splitAtOrp } from "../reader-core/orp";
-import { pivotOffsetCh, pivotOffsetPx, clearPivotCache } from "../reader-core/pivotOffset";
+import {
+  pivotOffsetCh,
+  pivotOffsetPx,
+  wordExtentCh,
+  wordExtentPx,
+  clearPivotCache,
+} from "../reader-core/pivotOffset";
 import { FONT_STACKS, isMonospace } from "../reader-core/fonts";
 import type { Word } from "../reader-core/words";
 import type { Settings } from "../settings";
 
 /** Fraction of a word rendered bold in Bionic mode. */
 const BIONIC_LEAD = 0.42;
+
+/**
+ * Player height the configured text size is calibrated against.
+ *
+ * Roughly a 720p player in a normal window. Autoscale multiplies the chosen size
+ * by how far the real player differs from this, so a size picked while windowed
+ * keeps the same *relative* weight in fullscreen instead of shrinking into the
+ * picture.
+ */
+const REFERENCE_PLAYER_HEIGHT = 540;
+
+/** Scale bounds. Unbounded scaling makes a tiny miniplayer illegible and a 4K
+ *  fullscreen absurd. */
+const MIN_SCALE = 0.6;
+const MAX_SCALE = 2.6;
 
 export interface ReaderView {
   current: Word | null;
@@ -34,6 +55,8 @@ export class ReaderOverlay {
   private guideBottom: HTMLSpanElement;
   private settings: Settings;
   private lastText: string | null = null;
+  private resize: ResizeObserver | null = null;
+  private scale = 1;
 
   constructor(settings: Settings) {
     this.settings = settings;
@@ -75,10 +98,37 @@ export class ReaderOverlay {
   mount(player: HTMLElement): void {
     if (this.root.parentElement === player) return;
     player.appendChild(this.root);
+
+    // Watching the player covers fullscreen, theatre mode and plain window
+    // resizing with one mechanism, rather than listening for a fullscreen event
+    // and missing the other two.
+    this.resize?.disconnect();
+    this.resize = new ResizeObserver(() => this.rescale(player));
+    this.resize.observe(player);
+    this.rescale(player);
   }
 
   destroy(): void {
+    this.resize?.disconnect();
+    this.resize = null;
     this.root.remove();
+  }
+
+  /** Re-derive the text size from the player's current height. Tolerates being
+   *  called before mount, where the reference height stands in. */
+  private rescale(player: HTMLElement | null): void {
+    const height = player?.clientHeight || REFERENCE_PLAYER_HEIGHT;
+    this.scale = this.settings.autoScale
+      ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, height / REFERENCE_PLAYER_HEIGHT))
+      : 1;
+    this.root.style.setProperty(
+      "--trf-size",
+      `${(this.settings.fontSize * this.scale).toFixed(2)}px`,
+    );
+    // A pixel offset measured at the old size would put the pivot in the wrong
+    // place; `ch` offsets scale with the font and are unaffected.
+    clearPivotCache();
+    this.lastText = null;
   }
 
   apply(settings: Settings): void {
@@ -92,9 +142,12 @@ export class ReaderOverlay {
     this.root.dataset.theme = settings.theme;
     this.root.dataset.mode = settings.mode;
     this.root.style.setProperty("--trf-font", stack);
-    this.root.style.setProperty("--trf-size", `${settings.fontSize}px`);
     this.root.style.setProperty("--trf-tracking", `${settings.letterSpacing}px`);
+    // Named `--trf-*` to match the stylesheet. An earlier `--context-opacity`
+    // here matched nothing, so the dimness control silently did nothing.
     this.root.style.setProperty("--trf-context-opacity", String(settings.contextOpacity));
+    this.root.style.setProperty("--trf-bottom", `${settings.verticalPosition}%`);
+    this.root.style.setProperty("--trf-width", `${settings.boxWidth}%`);
 
     this.guideTop.style.display = settings.showPivotGuides ? "" : "none";
     this.guideBottom.style.display = settings.showPivotGuides ? "" : "none";
@@ -105,6 +158,10 @@ export class ReaderOverlay {
       clearPivotCache();
       this.lastText = null;
     }
+
+    // Sets `--trf-size` from the size setting and the player's current height.
+    const player = this.root.parentElement;
+    this.rescale(player instanceof HTMLElement ? player : null);
   }
 
   /** Nothing is playing, or no word covers this moment. */
@@ -147,14 +204,22 @@ export class ReaderOverlay {
 
     // Monospace lands the pivot exactly using `ch` units; a proportional face
     // needs the glyph measured.
-    const offset = isMonospace(this.settings.font)
-      ? `${pivotOffsetCh(text)}ch`
-      : `${pivotOffsetPx(
-          text,
-          `${this.settings.fontSize}px ${FONT_STACKS[this.settings.font]}`,
-          this.settings.letterSpacing,
-        )}px`;
-    this.wordEl.style.setProperty("--trf-pivot-offset", offset);
+    const mono = isMonospace(this.settings.font);
+    const cssFont = `${(this.settings.fontSize * this.scale).toFixed(2)}px ${
+      FONT_STACKS[this.settings.font]
+    }`;
+    const spacing = this.settings.letterSpacing;
+
+    const offset = mono ? pivotOffsetCh(text) : pivotOffsetPx(text, cssFont, spacing);
+    // Context words are placed against the focus word's real edges. Anchoring
+    // them a fixed distance from the focal column instead lets a long word run
+    // straight over them, which is what turned "brain uses to" into a pile-up.
+    const extent = mono ? wordExtentCh(text) : wordExtentPx(text, cssFont, spacing);
+    const unit = mono ? "ch" : "px";
+
+    this.stage.style.setProperty("--trf-pivot-offset", `${offset}${unit}`);
+    this.stage.style.setProperty("--trf-word-left", `${extent.left}${unit}`);
+    this.stage.style.setProperty("--trf-word-right", `${extent.right}${unit}`);
 
     this.beforeEl.textContent = view.previous.map((w) => w.text).join(" ");
     this.afterEl.textContent = view.upcoming.map((w) => w.text).join(" ");

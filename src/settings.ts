@@ -18,6 +18,12 @@ export interface Settings {
   font: ReaderFont;
   fontSize: number;
   letterSpacing: number;
+  /** Scale the text with the player, so fullscreen is not tiny. */
+  autoScale: boolean;
+  /** Distance from the bottom of the player, as a percentage of its height. */
+  verticalPosition: number;
+  /** Reader width, as a percentage of the player's width. */
+  boxWidth: number;
   /** Already-read words kept visible to the left of the pivot. */
   contextBefore: number;
   /** Upcoming words shown to the right of the pivot. */
@@ -39,6 +45,9 @@ export const DEFAULTS: Settings = {
   font: "geist_mono",
   fontSize: 34,
   letterSpacing: 0,
+  autoScale: true,
+  verticalPosition: 8,
+  boxWidth: 62,
   contextBefore: 1,
   contextAfter: 3,
   contextOpacity: 0.38,

@@ -128,6 +128,35 @@ const FIELDS: Field[] = [
     format: (v) => `${v}px`,
   },
   {
+    kind: "toggle",
+    key: "autoScale",
+    group: "appearance",
+    label: "Scale with the player",
+    help: "Keep the text the same size relative to the video, so fullscreen does not shrink it into the picture.",
+  },
+  {
+    kind: "range",
+    key: "verticalPosition",
+    group: "appearance",
+    label: "Height above the bottom",
+    help: "Where the reader sits over the video.",
+    min: 0,
+    max: 80,
+    step: 1,
+    format: (v) => `${v}%`,
+  },
+  {
+    kind: "range",
+    key: "boxWidth",
+    group: "appearance",
+    label: "Reader width",
+    help: "As a share of the player's width. Wider shows more surrounding words before they are trimmed.",
+    min: 25,
+    max: 94,
+    step: 1,
+    format: (v) => `${v}%`,
+  },
+  {
     kind: "range",
     key: "letterSpacing",
     group: "appearance",
@@ -240,10 +269,15 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
   return wrapper;
 }
 
+/** Autoscale sizes the text against the *player*, and the preview is not one —
+ *  left on, it would scale against the options page and balloon. The preview
+ *  therefore always shows the configured size, which is what the slider means. */
+const previewSettings = (from: Settings): Settings => ({ ...from, autoScale: false });
+
 function update(patch: Partial<Settings>): void {
   settings = { ...settings, ...patch };
   void saveSettings(patch);
-  overlay?.apply(settings);
+  overlay?.apply(previewSettings(settings));
 }
 
 /** Advance the preview at a readable, fixed pace. There is no queue to react to
@@ -251,7 +285,7 @@ function update(patch: Partial<Settings>): void {
 function runPreview(): void {
   const host = document.getElementById("preview");
   if (!host) return;
-  overlay = new ReaderOverlay(settings);
+  overlay = new ReaderOverlay(previewSettings(settings));
   // Reuse the existing markup rather than mounting a second copy.
   host.replaceWith(((): HTMLElement => {
     const mounted = (overlay as unknown as { root: HTMLElement }).root;

@@ -20,11 +20,13 @@
 
   position: absolute;
   left: 50%;
-  bottom: 8%;
+  bottom: var(--trf-bottom, 8%);
   transform: translateX(-50%);
   z-index: 60; /* above the video, below YouTube's own controls and menus */
-  max-width: 92%;
-  padding: 14px 26px;
+  width: var(--trf-width, 62%);
+  max-width: 94%;
+  padding: 14px 20px;
+  box-sizing: border-box;
   border-radius: 14px;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   border: 1px solid var(--edge);
@@ -71,8 +73,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 22ch;
   min-height: calc(var(--trf-size) * 1.4);
+  /* Context words are absolutely positioned and never wrap. Without this a long
+     neighbour runs past the card and off the screen, instead of being trimmed
+     at the edge — and the reader must never resize itself to fit a word, or the
+     focal point moves. */
+  overflow: hidden;
+  /* Fade the trimmed ends so the cut reads as deliberate rather than clipped. */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
   font-family: var(--trf-font);
   font-size: var(--trf-size);
   letter-spacing: var(--trf-tracking);
@@ -124,13 +138,17 @@
   font-weight: 400;
 }
 
+/* Anchored to the focus word's real edges, not to the focal column. The word is
+   centred on its pivot letter, so how far it reaches depends on where that
+   letter falls — a fixed gap from the column lets long words overlap their
+   neighbours. `--trf-word-left` is negative, hence the subtraction. */
 .trf-context--before {
-  right: calc(50% + 1.6ch);
+  right: calc(50% - var(--trf-word-left, 0px) + 1ch);
   text-align: right;
 }
 
 .trf-context--after {
-  left: calc(50% + 1.6ch);
+  left: calc(50% + var(--trf-word-right, 0px) + 1ch);
   text-align: left;
 }
 
