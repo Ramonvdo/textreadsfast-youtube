@@ -219,12 +219,19 @@ function track(
   let handle = 0;
 
   const update = (): void => {
-    // An ad runs through this same element on its own clock, so reading the
-    // transcript at that offset would show real words at meaningless moments.
-    if (adShowing) {
+    // An ad runs through this same element on its own clock, so the transcript
+    // read at that offset would be real words at meaningless moments. Hide the
+    // reader outright rather than fading it: there is nothing to follow.
+    //
+    // The player is read directly here rather than through the cached flag. A
+    // session can be built in the instant before the ad class lands, and the
+    // flag would then let a frame of the real transcript render over the ad.
+    if (adOnScreen()) {
+      overlay.setHidden(true);
       overlay.clear();
       return;
     }
+    overlay.setHidden(false);
     const timeMs = video.currentTime * 1000;
     const index = wordAt(words, timeMs);
     if (index < 0) {
@@ -302,6 +309,19 @@ function teardown(): void {
  * script first runs. Re-attaching to the same element is a no-op, so this can be
  * called from anywhere that has just found the player.
  */
+/**
+ * Is an ad on screen right now?
+ *
+ * Reads the player rather than the cached flag, which only updates when the
+ * observer fires. Cheap enough to call per frame, and being right per frame is
+ * what keeps the reader off the screen during an ad.
+ */
+function adOnScreen(): boolean {
+  return isAdShowing(
+    adWatcher?.player ?? document.querySelector("#movie_player"),
+  );
+}
+
 function watchAds(player: HTMLElement): void {
   if (adWatcher?.player !== player) {
     adWatcher?.observer.disconnect();
@@ -324,13 +344,15 @@ function onAdStateChange(player: HTMLElement): void {
 
   switch (action) {
     case "suspend":
-      // The ad has its own clock, so the session's timings mean nothing against
-      // it. `update` bails while `adShowing`; this just clears what is on screen.
+      // Done here as well as in `update`, because a paused ad presents no frames
+      // and `update` would not run to notice.
+      session?.overlay.setHidden(true);
       session?.overlay.clear();
       break;
     case "resume":
       // A mid-roll interrupted captions that are still correct. Re-fetching them
       // would be wasted work that can also fail.
+      session?.overlay.setHidden(false);
       session?.redraw();
       break;
     case "rescan":

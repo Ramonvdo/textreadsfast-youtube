@@ -95,6 +95,13 @@
   opacity: 0;
 }
 
+/* An ad is playing. Gone rather than faded: `trf-idle` is about holding a place
+   in *this* video, and there is no place to hold over someone else's. `display`
+   rather than opacity so nothing can flash through the transition. */
+.trf-reader.trf-hidden {
+  display: none;
+}
+
 .trf-stage {
   position: relative;
   display: flex;

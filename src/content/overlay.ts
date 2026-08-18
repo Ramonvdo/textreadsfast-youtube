@@ -183,9 +183,22 @@ export class ReaderOverlay {
     this.rescale(player instanceof HTMLElement ? player : null);
   }
 
+  /**
+   * Hide the reader entirely, for as long as something other than the video is
+   * playing. Separate from `clear()`, which fades between cues and is meant to
+   * hold the reader's place on screen — during an ad there is no place to hold,
+   * and a card sitting over someone else's video is just clutter.
+   */
+  setHidden(hidden: boolean): void {
+    this.root.classList.toggle("trf-hidden", hidden);
+  }
+
   /** Nothing is playing, or no word covers this moment. */
   clear(): void {
-    if (this.lastText === null) return;
+    // Keyed on what is actually on screen, not on `lastText`. `apply` clears
+    // `lastText` to force a redraw, so guarding on it here meant that after any
+    // settings change this became a no-op and the last word stayed put.
+    if (this.root.classList.contains("trf-idle")) return;
     this.lastText = null;
     this.root.classList.add("trf-idle");
     this.wordEl.textContent = "";
@@ -203,6 +216,7 @@ export class ReaderOverlay {
     if (view.current.text === this.lastText) return;
     this.lastText = view.current.text;
     this.root.classList.remove("trf-idle");
+    this.root.classList.remove("trf-hidden");
 
     if (this.settings.mode === "bionic") {
       this.renderBionic(view);
