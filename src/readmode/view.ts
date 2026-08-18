@@ -422,6 +422,42 @@ export function renderReadMode(
 
   paint(model, null);
 
+  /*
+   * Tie the right column's geometry to the left one's.
+   *
+   * The chat panel ends where the video ends, and the message box ends where
+   * the note box ends, so the two writing surfaces sit side by side on one line.
+   * Neither can be expressed in CSS alone: the video's height comes from an
+   * aspect ratio applied to an `fr` column, and `fr` is not reachable from
+   * `calc()`. So the two numbers are measured and published as custom
+   * properties, and the stylesheet does the rest.
+   */
+  const sync = (): void => {
+    const stageBox = stage.getBoundingClientRect();
+    if (stageBox.height < 1) return; // not laid out yet
+
+    // Measured from the column's own top, not the grid's. The grid carries 57px
+    // of top padding, so measuring from its border box counted that padding
+    // twice and pushed the message box below the note box by exactly that much.
+    const columnTop = main.getBoundingClientRect().top;
+    const inputBottom = noteInput.getBoundingClientRect().bottom - columnTop;
+
+    root.style.setProperty("--trf-rm-stage-h", `${stageBox.height}px`);
+    root.style.setProperty(
+      "--trf-rm-inputs-h",
+      `${Math.max(0, inputBottom)}px`,
+    );
+  };
+
+  // Guarded because `ResizeObserver` does not exist in every environment this
+  // renders in — jsdom, where the view is unit-tested, has no implementation.
+  // The layout still works without it; it just stops re-measuring on resize.
+  const geometry =
+    typeof ResizeObserver === "function" ? new ResizeObserver(sync) : null;
+  geometry?.observe(stage);
+  geometry?.observe(noteInput);
+  geometry?.observe(notesHead);
+
   return {
     root,
     playerSlot,
@@ -429,8 +465,10 @@ export function renderReadMode(
       const previous = current;
       current = next;
       paint(next, previous);
+      sync();
     },
     destroy() {
+      geometry?.disconnect();
       root.remove();
     },
   };

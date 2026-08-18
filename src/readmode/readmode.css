@@ -104,13 +104,24 @@ html.trf-rm-open body {
   min-height: 0;
 }
 
+/*
+ * The chat column is measured against the video column, not against the window.
+ *
+ * `--trf-rm-stage-h` is the video's height and `--trf-rm-inputs-h` is the
+ * distance down to the bottom of the note box; `view.ts` publishes both with a
+ * ResizeObserver. That gives the chat panel the same bottom edge as the video
+ * and the message box the same bottom edge as the note box, so the two places
+ * you type sit on one line. CSS cannot work either out on its own: the video's
+ * height comes from an aspect ratio on an `fr` column, and `fr` is not
+ * reachable from `calc()`.
+ */
 .trf-rm-side {
   grid-column: 5;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, var(--trf-rm-stage-h, 62%)) minmax(0, 1fr) auto;
+  height: var(--trf-rm-inputs-h, 100%);
   min-height: 0;
-  padding-bottom: 150px;
 }
 
 /* ── left navigation ────────────────────────────────────────────────────── */
@@ -379,7 +390,7 @@ html.trf-rm-open body {
 /* ── the chat column ────────────────────────────────────────────────────── */
 
 .trf-rm-chat {
-  flex: 1 1 auto;
+  grid-row: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 12px 14px;
@@ -485,10 +496,10 @@ html.trf-rm-open body {
 }
 
 .trf-rm-compose {
+  grid-row: 3;
   position: relative;
-  flex: none;
-  margin-top: 14px;
-  padding: 10px 12px 40px;
+  margin-top: 0;
+  padding: 8px 10px 34px;
   border-radius: 4px;
   background: var(--trf-rm-panel);
   border: 1px solid color-mix(in srgb, var(--trf-rm-body) 18%, transparent);
@@ -497,8 +508,8 @@ html.trf-rm-open body {
 .trf-rm-composebox {
   display: block;
   width: 100%;
-  min-height: 46px;
-  max-height: 160px;
+  min-height: 32px;
+  max-height: 120px;
   border: 0;
   background: none;
   resize: none;
@@ -523,8 +534,8 @@ html.trf-rm-open body {
 
 .trf-rm-send {
   position: absolute;
-  right: 10px;
-  bottom: 8px;
+  right: 8px;
+  bottom: 6px;
   display: grid;
   place-items: center;
   width: 28px;

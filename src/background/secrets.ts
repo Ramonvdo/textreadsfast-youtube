@@ -24,13 +24,14 @@ const PROMPT = "readmode.summaryPrompt";
 export const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 
 /**
- * A free model to start on, so a fresh key works without a trip to settings.
+ * Empty means "resolve one from the live list".
  *
- * Only a starting point: OpenRouter's free lineup changes constantly, which is
- * why the picker is populated from the live `/models` list rather than from a
- * table in here that would go stale.
+ * There is deliberately no hardcoded model here. The first version shipped
+ * `meta-llama/llama-3.3-70b-instruct:free`, which then stopped being free, and
+ * every install failed on its first request. A model id in source is a fact
+ * about the day it was written; `models.ts` asks the provider instead.
  */
-export const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+export const DEFAULT_MODEL = "";
 
 /** Shipped default, editable in settings. Kept here so there is exactly one. */
 export const DEFAULT_SUMMARY_PROMPT = `Explain this video transcript in as few words as possible, make sure to list bulletpoints to provide a complete but simple summary. Try and explain the what (what it is / does), why (the benefit it provides), and provide clear actionable guidelines on how to implement it. Explain concepts as if to a child. Identify knowledge gaps. Refine the explanation to eliminate jargon. Ensure deep comprehension over memorization. Deliver only the 20% of information that yields 80% of the results. Eliminate all secondary data. Ensure reasoning is airtight without using complex phrasing or redundant analogies, make sure things are easy, not everything needs an analogy if it is easy to grasp. Again the main goal is: Explain this in as few words as possible.
@@ -81,11 +82,16 @@ export async function getConfig(): Promise<AiConfig> {
   return {
     apiKey: String(stored[KEY] ?? ""),
     baseUrl: String(stored[BASE_URL] ?? OPENROUTER_BASE) || OPENROUTER_BASE,
-    model: String(stored[MODEL] ?? DEFAULT_MODEL) || DEFAULT_MODEL,
+    model: String(stored[MODEL] ?? DEFAULT_MODEL),
     // An empty stored prompt means "use the shipped default", so the default
     // lives in exactly one place rather than being copied into storage on install.
     summaryPrompt: String(stored[PROMPT] ?? "") || DEFAULT_SUMMARY_PROMPT,
   };
+}
+
+/** Record the model in use, so a resolved choice shows up in settings. */
+export async function setModel(model: string): Promise<void> {
+  await chrome.storage.local.set({ [MODEL]: model });
 }
 
 export async function hasApiKey(): Promise<boolean> {

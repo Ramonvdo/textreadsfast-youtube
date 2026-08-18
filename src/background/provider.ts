@@ -89,7 +89,26 @@ function codeForStatus(status: number | null): ErrorCode {
   // key with either, and both mean the same thing to the person reading it.
   if (status === 401 || status === 403) return "bad_key";
   if (status === 429) return "rate_limit";
+  // A model that has been renamed, withdrawn, or moved off the free tier.
+  if (status === 404) return "bad_model";
   return "network";
+}
+
+/**
+ * Some providers report a withdrawn model with a 400 and an explanation rather
+ * than a 404. OpenRouter's is "This model is unavailable for free. The paid
+ * version is available now - use this slug instead: …", which is recoverable
+ * information dressed as a generic failure.
+ */
+function looksLikeModelProblem(message: string): boolean {
+  const text = message.toLowerCase();
+  return (
+    text.includes("unavailable for free") ||
+    text.includes("no endpoints found") ||
+    text.includes("not a valid model") ||
+    text.includes("model not found") ||
+    (text.includes("model") && text.includes("does not exist"))
+  );
 }
 
 /** `AbortError` arrives as a `DOMException`, which is not reliably an `Error`
@@ -289,9 +308,11 @@ export async function streamChat(
   }
 
   if (!response.ok) {
+    const message = await failureMessage(response);
+    const code = codeForStatus(response.status);
     throw new ProviderError(
-      codeForStatus(response.status),
-      await failureMessage(response),
+      code === "network" && looksLikeModelProblem(message) ? "bad_model" : code,
+      message,
     );
   }
 
@@ -423,9 +444,11 @@ export async function listFreeModels(
 
   if (response.status === 404) return [];
   if (!response.ok) {
+    const message = await failureMessage(response);
+    const code = codeForStatus(response.status);
     throw new ProviderError(
-      codeForStatus(response.status),
-      await failureMessage(response),
+      code === "network" && looksLikeModelProblem(message) ? "bad_model" : code,
+      message,
     );
   }
 

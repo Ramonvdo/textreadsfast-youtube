@@ -19,6 +19,7 @@ import {
   type ChatTurn,
 } from "../shared/aiProtocol";
 import { ProviderError, streamChat } from "./provider";
+import { pickAlternative, resolveModel } from "./models";
 import { getConfig, hasOriginPermission } from "./secrets";
 
 /**
@@ -95,31 +96,64 @@ export function handleAiPort(port: chrome.runtime.Port): void {
         ...request.messages,
       ];
 
+      // Never a hardcoded id: resolved from the live free list when the user
+      // has not chosen one. See the note at the top of `models.ts`.
+      let model = await resolveModel();
+
       // Sent before the first token so the UI can stop guessing whether
       // anything is happening at all.
-      post({ type: "chat.open", requestId, model: config.model });
+      post({ type: "chat.open", requestId, model });
 
       let sawDelta = false;
       const keepalive = setInterval(() => {
-        if (!sawDelta)
-          post({ type: "chat.open", requestId, model: config.model });
+        if (!sawDelta) post({ type: "chat.open", requestId, model });
       }, KEEPALIVE_MS);
 
       try {
-        const result = await streamChat(
-          {
-            baseUrl: config.baseUrl,
-            apiKey: config.apiKey,
-            model: config.model,
-            messages,
-          },
-          (text) => {
-            sawDelta = true;
-            post({ type: "chat.delta", requestId, text });
-          },
-          controller.signal,
-        );
-        post({ type: "chat.done", requestId, stopReason: result.stopReason });
+        /*
+         * One retry, and only for a model the provider refused.
+         *
+         * Free models are withdrawn and re-priced constantly, so "this model is
+         * unavailable for free" is an ordinary Tuesday rather than a real
+         * failure, and it is recoverable without involving the reader at all.
+         * Only retried before any token has arrived: once text is on screen,
+         * starting again would replace what they are already reading.
+         */
+        for (let attempt = 0; ; attempt += 1) {
+          try {
+            const result = await streamChat(
+              {
+                baseUrl: config.baseUrl,
+                apiKey: config.apiKey,
+                model,
+                messages,
+              },
+              (text) => {
+                sawDelta = true;
+                post({ type: "chat.delta", requestId, text });
+              },
+              controller.signal,
+            );
+            post({
+              type: "chat.done",
+              requestId,
+              stopReason: result.stopReason,
+            });
+            return;
+          } catch (error) {
+            const recoverable =
+              error instanceof ProviderError &&
+              error.code === "bad_model" &&
+              !sawDelta &&
+              attempt === 0;
+            if (!recoverable) throw error;
+
+            const alternative = await pickAlternative(model);
+            if (!alternative) throw error;
+            model = alternative;
+            post({ type: "chat.open", requestId, model });
+          }
+        }
       } finally {
         clearInterval(keepalive);
       }

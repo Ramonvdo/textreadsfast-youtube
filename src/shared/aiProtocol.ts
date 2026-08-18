@@ -46,6 +46,9 @@ export type ErrorCode =
   | "no_permission"
   | "rate_limit"
   | "bad_key"
+  /** The chosen model is gone, renamed, or no longer free. Recoverable by
+   *  choosing another, which is why it is not lumped in with `network`. */
+  | "bad_model"
   | "network"
   | "aborted";
 

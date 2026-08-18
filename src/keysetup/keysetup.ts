@@ -29,6 +29,16 @@ const input = document.getElementById("key") as HTMLInputElement;
 const save = document.getElementById("save") as HTMLButtonElement;
 const settings = document.getElementById("settings") as HTMLButtonElement;
 const statusLine = document.getElementById("status") as HTMLParagraphElement;
+const step2 = document.getElementById("step2") as HTMLDivElement;
+const modelSelect = document.getElementById("model") as HTMLSelectElement;
+const start = document.getElementById("start") as HTMLButtonElement;
+const refresh = document.getElementById("refresh") as HTMLButtonElement;
+
+interface ModelOption {
+  id: string;
+  name: string;
+  contextLength: number;
+}
 
 function say(message: string, tone: "info" | "error" = "info"): void {
   statusLine.textContent = message;
@@ -43,7 +53,25 @@ async function submit(): Promise<void> {
   const value = input.value.trim();
   if (!value) {
     say("Paste a key first.", "error");
-    input.focus();
+    /*
+     * A key can already be stored and the assistant still be unusable — the
+     * provider origin may never have been granted, or the chosen model may have
+     * been withdrawn. In both cases the key step is noise, so start at the model.
+     */
+    void (async () => {
+      const stored = await chrome.storage.local.get({ [KEY]: "" });
+      if (String(stored[KEY] ?? "").length > 0) {
+        document
+          .querySelectorAll<HTMLElement>("[data-step1]")
+          .forEach((node) => {
+            node.hidden = true;
+          });
+        say("Key already saved. Choose a model and start.");
+        await showModels();
+        return;
+      }
+      input.focus();
+    })();
     return;
   }
 
@@ -72,16 +100,77 @@ async function submit(): Promise<void> {
 
     await chrome.storage.local.set({ [KEY]: value });
     input.value = "";
-    say("Connected.");
+    say("Connected. Pick a model, or just press Start.");
 
-    // Only a signal. The key itself never crosses this boundary.
-    window.parent.postMessage({ channel: CHANNEL, kind: "key-ready" }, "*");
+    // Step two rather than starting straight away: which free model answers
+    // matters, the list changes weekly, and choosing here beats discovering in
+    // settings later that the automatic pick was not what you wanted.
+    await showModels();
   } catch (error) {
     save.disabled = false;
     say(error instanceof Error ? error.message : String(error), "error");
   }
 }
 
+/**
+ * Offer the live free list.
+ *
+ * Never a hardcoded set. The first release shipped one model id in source, it
+ * stopped being free, and every new install failed on its first request.
+ */
+async function showModels(force = false): Promise<void> {
+  step2.hidden = false;
+  refresh.disabled = true;
+  modelSelect.replaceChildren();
+
+  const reply = (await chrome.runtime
+    .sendMessage({ type: "ai.listModels", force })
+    .catch(() => null)) as { ok: boolean; models?: ModelOption[] } | null;
+
+  refresh.disabled = false;
+
+  if (!reply?.ok || !reply.models || reply.models.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Choose automatically";
+    modelSelect.append(option);
+    say("Could not list models. One will be chosen automatically.");
+    return;
+  }
+
+  // "Automatic" first and selected, so the ranked top choice is followed and
+  // stays followed as the free lineup changes underneath.
+  const auto = document.createElement("option");
+  auto.value = "";
+  auto.textContent = `Choose automatically (${reply.models[0].name})`;
+  modelSelect.append(auto);
+
+  for (const option of reply.models) {
+    const node = document.createElement("option");
+    node.value = option.id;
+    node.textContent =
+      option.contextLength > 0
+        ? `${option.name} · ${Math.round(option.contextLength / 1000)}k context`
+        : option.name;
+    modelSelect.append(node);
+  }
+
+  const stored = await chrome.storage.local.get({ "ai.model": "" });
+  modelSelect.value = String(stored["ai.model"] ?? "");
+  say(`${reply.models.length} free models available.`);
+}
+
+async function begin(): Promise<void> {
+  start.disabled = true;
+  await chrome.runtime
+    .sendMessage({ type: "ai.setModel", model: modelSelect.value })
+    .catch(() => undefined);
+  // Only a signal. The key itself never crosses this boundary.
+  window.parent.postMessage({ channel: CHANNEL, kind: "key-ready" }, "*");
+}
+
+start.addEventListener("click", () => void begin());
+refresh.addEventListener("click", () => void showModels(true));
 save.addEventListener("click", () => void submit());
 input.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -90,4 +179,20 @@ input.addEventListener("keydown", (event) => {
   }
 });
 
-input.focus();
+/*
+ * A key can already be stored and the assistant still be unusable — the
+ * provider origin may never have been granted, or the chosen model may have
+ * been withdrawn. In both cases the key step is noise, so start at the model.
+ */
+void (async () => {
+  const stored = await chrome.storage.local.get({ [KEY]: "" });
+  if (String(stored[KEY] ?? "").length > 0) {
+    document.querySelectorAll<HTMLElement>("[data-step1]").forEach((node) => {
+      node.hidden = true;
+    });
+    say("Key already saved. Choose a model and start.");
+    await showModels();
+    return;
+  }
+  input.focus();
+})();

@@ -148,6 +148,15 @@ export function mountAiSettings(host: HTMLElement): void {
     model.replaceChildren();
     const seen = new Set<string>();
 
+    // Empty means "let the worker rank the live list". Offered first, because
+    // it is the only choice that keeps working as the free lineup changes.
+    const auto = el("option");
+    auto.value = "";
+    auto.textContent = options.length
+      ? `Choose automatically (${options[0].name})`
+      : "Choose automatically";
+    model.append(auto);
+
     for (const option of options) {
       const node = el("option");
       node.value = option.id;

@@ -23,8 +23,8 @@ import type {
 } from "../shared/libraryProtocol";
 import { handleAiPort } from "./ai";
 import { handleLibraryRequest } from "./db";
-import { listFreeModels } from "./provider";
-import { getConfig } from "./secrets";
+import { availableModels } from "./models";
+import { setModel } from "./secrets";
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== AI_PORT) return;
@@ -50,9 +50,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   void (async () => {
     try {
-      const config = await getConfig();
-      const models = await listFreeModels(config.baseUrl, config.apiKey);
-      sendResponse({ ok: true, models });
+      const force = Boolean((message as { force?: boolean }).force);
+      // Ranked, not raw: the first entry is the one that gets used when nobody
+      // chooses, so the list and the automatic choice agree.
+      sendResponse({ ok: true, models: await availableModels(force) });
     } catch (error) {
       sendResponse({
         ok: false,
@@ -61,6 +62,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
   })();
 
+  return true;
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if ((message as { type?: string })?.type !== "ai.setModel") return false;
+  void setModel(String((message as { model?: string }).model ?? "")).then(() =>
+    sendResponse({ ok: true }),
+  );
   return true;
 });
 

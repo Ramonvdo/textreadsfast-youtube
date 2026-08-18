@@ -152,18 +152,28 @@
       >
     </p>
 
-    <label for="key">API key</label>
+    <label for="key" data-step1>API key</label>
     <input
       id="key"
+      data-step1
       type="password"
       placeholder="sk-or-v1-…"
       autocomplete="off"
       spellcheck="false"
     />
 
-    <div class="row">
-      <button id="save" type="button">Save and start</button>
+    <div class="row" data-step1>
+      <button id="save" type="button">Save and continue</button>
       <button id="settings" class="link" type="button">All settings…</button>
+    </div>
+
+    <div id="step2" hidden>
+      <label for="model">Model</label>
+      <select id="model"></select>
+      <div class="row">
+        <button id="start" type="button">Start</button>
+        <button id="refresh" class="link" type="button">Refresh list</button>
+      </div>
     </div>
 
     <p id="status" class="fine"></p>
