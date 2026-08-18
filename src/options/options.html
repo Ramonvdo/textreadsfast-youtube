@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TextReadsFast for YouTube</title>
+    <link rel="stylesheet" href="reader.css" />
+    <style>
+      :root {
+        --page-bg: #fbfaf8;
+        --page-text: #1c1b19;
+        --page-muted: #8b8d90;
+        --page-edge: rgba(0, 0, 0, 0.12);
+        --page-accent: #c1442a;
+        color-scheme: light dark;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page-bg: #16181b;
+          --page-text: #e8e6e3;
+          --page-muted: #8b8d90;
+          --page-edge: rgba(255, 255, 255, 0.14);
+          --page-accent: #e4572e;
+        }
+      }
+
+      body {
+        margin: 0;
+        padding: 40px 24px 64px;
+        background: var(--page-bg);
+        color: var(--page-text);
+        font-family: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 26px;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        margin: 0 0 6px;
+      }
+
+      .lede {
+        color: var(--page-muted);
+        max-width: 60ch;
+        margin: 0 0 28px;
+      }
+
+      h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--page-muted);
+        margin: 32px 0 10px;
+      }
+
+      .group {
+        border: 1px solid var(--page-edge);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 14px 16px;
+      }
+
+      .row + .row {
+        border-top: 1px solid var(--page-edge);
+      }
+
+      .row label {
+        font-weight: 500;
+      }
+
+      .row p {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: var(--page-muted);
+        max-width: 46ch;
+      }
+
+      .control {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      select,
+      input[type="range"] {
+        font: inherit;
+        accent-color: var(--page-accent);
+      }
+
+      select {
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid var(--page-edge);
+        background: transparent;
+        color: inherit;
+      }
+
+      output {
+        font-variant-numeric: tabular-nums;
+        font-size: 13px;
+        color: var(--page-muted);
+        min-width: 5ch;
+        text-align: right;
+      }
+
+      /* The preview carries its own reader palette so the theme picker shows
+         the truth rather than the page's colours. */
+      #preview {
+        position: relative;
+        margin: 0 0 8px;
+        border-radius: 16px;
+        transform: none;
+        left: auto;
+        bottom: auto;
+        max-width: none;
+      }
+
+      .hint {
+        font-size: 13px;
+        color: var(--page-muted);
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>TextReadsFast for YouTube</h1>
+      <p class="lede">
+        Subtitles, one word at a time, with the focal letter pinned in place so
+        your eyes stop jumping. Set YouTube's own playback speed higher — that is
+        where the time is saved.
+      </p>
+
+      <div id="preview" class="trf-reader" data-theme="focus" data-mode="rsvp">
+        <div class="trf-stage">
+          <span class="trf-guide trf-guide--top"></span>
+          <span class="trf-guide trf-guide--bottom"></span>
+          <span class="trf-context trf-context--before"></span>
+          <span class="trf-word"></span>
+          <span class="trf-context trf-context--after"></span>
+        </div>
+      </div>
+      <p class="hint">A live preview, running the same code as the player overlay.</p>
+
+      <h2>Reading</h2>
+      <div class="group" id="group-reading"></div>
+
+      <h2>Appearance</h2>
+      <div class="group" id="group-appearance"></div>
+
+      <h2>Captions</h2>
+      <div class="group" id="group-captions"></div>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+TextReadsFast for YouTube
+Copyright (c) 2026 Ramon Dooren
+
+The reading engine in src/reader-core/ is copied from TextReadsFast
+(https://github.com/rdooren/textreadsfast), which is itself a derivative of
+Handy (https://github.com/cjpais/Handy), Copyright (c) 2025 CJ Pais, MIT
+licensed. Only the pivot maths and alignment are shared; none of Handy's audio
+or transcription code is present here.
+
+Bundled fonts (Geist, Geist Mono, JetBrains Mono, Atkinson Hyperlegible) are
+licensed under the SIL Open Font License 1.1. See public/fonts/LICENSES.md.
+
+This extension is not affiliated with, endorsed by, or sponsored by YouTube or
+Google.

@@ -1,0 +1,8 @@
+node_modules
+dist
+*.local
+*.log
+.DS_Store
+
+# Packaged uploads for the Chrome Web Store
+*.zip

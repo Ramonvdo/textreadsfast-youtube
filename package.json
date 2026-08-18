@@ -1,0 +1,21 @@
+{
+  "name": "textreadsfast-youtube",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Read YouTube subtitles one word at a time, at a fixed focal point",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check-drift": "node scripts/check-drift.mjs",
+    "check": "pnpm run typecheck && pnpm test && pnpm run check-drift"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "esbuild": "^0.24.0",
+    "typescript": "~5.6.3",
+    "vitest": "^3.2.4"
+  }
+}

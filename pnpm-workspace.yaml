@@ -1,0 +1,6 @@
+# esbuild ships its platform binary as an optional dependency, so its install
+# script is not needed — builds work with it blocked, which is where pnpm 10
+# leaves third-party lifecycle scripts by default. Stated explicitly so a fresh
+# clone does not get pnpm's unresolved placeholder.
+allowBuilds:
+  esbuild: false
