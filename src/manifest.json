@@ -21,7 +21,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js", "fonts/*"],
+      "resources": ["inject.js", "fonts/*", "keysetup.html"],
       "matches": ["*://www.youtube.com/*"]
     }
   ],

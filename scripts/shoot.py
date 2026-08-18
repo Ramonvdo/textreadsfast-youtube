@@ -116,6 +116,13 @@ def main() -> None:
 
             page.screenshot(path=OUT)
             boxes = page.evaluate(MEASURE)
+
+            # The key-setup state is worth looking at too: it is what a new user
+            # sees first, and it is the only pane that is an iframe.
+            page.goto(f"http://127.0.0.1:{port}/harness.html?state=needs-key")
+            page.wait_for_function("() => window.__ready === true", timeout=15000)
+            page.screenshot(path=os.path.join(OUT_DIR, "readmode-needs-key.png"))
+
             browser.close()
     finally:
         httpd.shutdown()

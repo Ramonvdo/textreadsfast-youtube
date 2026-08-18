@@ -37,6 +37,14 @@ chrome.runtime.onConnect.addListener((port) => {
  * It cannot fetch it itself: the list needs the API key, and the key is only
  * ever read here.
  */
+chrome.runtime.onMessage.addListener((message) => {
+  // The inline setup frame is sandboxed inside a content-script overlay and
+  // cannot open a tab itself.
+  if ((message as { type?: string })?.type !== "ai.openOptions") return false;
+  chrome.runtime.openOptionsPage();
+  return false;
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if ((message as { type?: string })?.type !== "ai.listModels") return false;
 

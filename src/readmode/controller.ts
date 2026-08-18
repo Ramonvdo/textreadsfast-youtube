@@ -76,9 +76,16 @@ function setModel(next: Partial<ReadModeModel>): void {
  * Stop YouTube's shortcuts firing while a note is being typed.
  *
  * YouTube binds them at document level, and moving the player does not unbind
- * them — so `k` in the note box pauses the video and `j`/`l` scrub it. This
- * would be the day-one complaint. `stopPropagation` rather than `preventDefault`,
- * because the keystroke still has to reach the input it was aimed at.
+ * them — so `k` in the note box would pause the video and `j`/`l` scrub it.
+ *
+ * ⚠ BUBBLE PHASE, NOT CAPTURE. This listened in the capture phase at first, and
+ * `stopPropagation()` there halts the event on the way *down* — so it never
+ * reached the input at all and Enter silently did nothing. In the bubble phase
+ * the input handles the key first, and the event is stopped on the way back up,
+ * before it reaches the document listeners where YouTube's shortcuts live.
+ *
+ * `stopPropagation` rather than `preventDefault`, because the keystroke still
+ * has to do its ordinary job of typing a character.
  */
 function shadowKeyboard(root: HTMLElement): () => void {
   const isTyping = (target: EventTarget | null): boolean =>
@@ -91,13 +98,13 @@ function shadowKeyboard(root: HTMLElement): () => void {
     if (isTyping(event.target)) event.stopPropagation();
   };
 
-  root.addEventListener("keydown", stop, true);
-  root.addEventListener("keyup", stop, true);
-  root.addEventListener("keypress", stop, true);
+  root.addEventListener("keydown", stop);
+  root.addEventListener("keyup", stop);
+  root.addEventListener("keypress", stop);
   return () => {
-    root.removeEventListener("keydown", stop, true);
-    root.removeEventListener("keyup", stop, true);
-    root.removeEventListener("keypress", stop, true);
+    root.removeEventListener("keydown", stop);
+    root.removeEventListener("keyup", stop);
+    root.removeEventListener("keypress", stop);
   };
 }
 
@@ -231,8 +238,11 @@ function runChat(
       setModel({
         messages,
         chat:
-          code === "no_key"
-            ? { kind: "needs-key" }
+          code === "no_key" || code === "no_permission"
+            ? {
+                kind: "needs-key",
+                setupUrl: chrome.runtime.getURL("keysetup.html"),
+              }
             : { kind: "error", message, retryable: code !== "bad_key" },
       });
     },
@@ -329,6 +339,18 @@ export async function openReadMode(
     dispose: [],
     streamingId: null,
   };
+
+  // The inline setup frame reports back when a key is saved. It sends only a
+  // signal — the key itself never crosses out of that extension-origin document.
+  const onKeyReady = (event: MessageEvent): void => {
+    const data = event.data as { channel?: string; kind?: string };
+    if (data?.channel !== "trf-youtube" || data.kind !== "key-ready") return;
+    if (!session || session.streamingId) return;
+    setModel({ chat: { kind: "loading" } });
+    runChat(summaryPrompt, []);
+  };
+  window.addEventListener("message", onKeyReady);
+  session.dispose.push(() => window.removeEventListener("message", onKeyReady));
 
   if (loan) session.dispose.push(keepAdopted(loan, view.playerSlot));
   session.dispose.push(shadowKeyboard(view.root));

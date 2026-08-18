@@ -30,6 +30,7 @@ const entries = {
   popup: "src/popup/popup.ts",
   background: "src/background/index.ts",
   library: "src/library/library.ts",
+  keysetup: "src/keysetup/keysetup.ts",
   ...(dev ? { harness: "src/dev/harness.ts" } : {}),
 };
 
@@ -90,6 +91,10 @@ async function copyStatic() {
   await cp(
     resolve(root, "src/library/library.html"),
     resolve(outdir, "library.html"),
+  );
+  await cp(
+    resolve(root, "src/keysetup/keysetup.html"),
+    resolve(outdir, "keysetup.html"),
   );
   if (dev) {
     // Emitted at the dist root on purpose: `buildCss` rewrites font urls to be

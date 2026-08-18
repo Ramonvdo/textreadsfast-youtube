@@ -87,10 +87,22 @@ describe("chapters", () => {
       view.root.querySelectorAll<HTMLButtonElement>(".trf-rm-chapter");
 
     expect(buttons).toHaveLength(2);
-    expect(buttons[0].textContent).toBe("Intro");
+    expect(buttons[0].querySelector(".trf-rm-chaptertitle")?.textContent).toBe(
+      "Intro",
+    );
 
     buttons[1].click();
     expect(h.onSeek).toHaveBeenCalledWith(300_000);
+  });
+
+  // The nav is for moving around the video, so each row has to say where it
+  // goes. Without the timestamp it is a description, not a way to navigate.
+  it("shows each chapter's start time", () => {
+    const view = renderReadMode(model(), handlers());
+    const times = [...view.root.querySelectorAll(".trf-rm-chaptertime")].map(
+      (n) => n.textContent,
+    );
+    expect(times).toEqual(["0:00", "5:00"]);
   });
 
   it("marks exactly one chapter current, and follows the playhead", () => {
@@ -174,8 +186,9 @@ describe("notes", () => {
     expect(h.onSeek).toHaveBeenCalledWith(621_000);
   });
 
-  it("disables export until there is something to export", () => {
-    const view = renderReadMode(model(), handlers());
+  it("disables export until there is something to export, then exports", () => {
+    const h = handlers();
+    const view = renderReadMode(model(), h);
     const button =
       view.root.querySelector<HTMLButtonElement>(".trf-rm-export")!;
     expect(button.disabled).toBe(true);
@@ -184,6 +197,9 @@ describe("notes", () => {
       model({ notes: [{ id: "n", atMs: 0, text: "x", createdAt: 1 }] }),
     );
     expect(button.disabled).toBe(false);
+
+    button.click();
+    expect(h.onExport).toHaveBeenCalled();
   });
 });
 
@@ -260,11 +276,27 @@ describe("chat", () => {
     expect(view.root.querySelector("strong")?.textContent).toBe("works");
   });
 
-  it("offers a way forward when there is no API key", () => {
+  // Setting up the key happens in the chat panel, not on a settings page. The
+  // form is an extension-origin iframe, so the host page cannot read what is
+  // typed into it, and so it can request the provider permission — neither of
+  // which a form drawn by the content script could manage.
+  it("embeds the key form inline when one is offered", () => {
+    const view = renderReadMode(
+      model({ chat: { kind: "needs-key", setupUrl: "keysetup.html" } }),
+      handlers(),
+    );
+    const frame =
+      view.root.querySelector<HTMLIFrameElement>(".trf-rm-keyframe");
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute("src")).toBe("keysetup.html");
+  });
+
+  it("falls back to words when no setup page is available", () => {
     const view = renderReadMode(
       model({ chat: { kind: "needs-key" } }),
       handlers(),
     );
+    expect(view.root.querySelector(".trf-rm-keyframe")).toBeNull();
     expect(view.root.querySelector(".trf-rm-chat")?.textContent).toContain(
       "settings",
     );

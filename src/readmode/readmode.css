@@ -144,16 +144,46 @@ html.trf-rm-open body {
   padding: 0;
 }
 
+/*
+ * A chapter row: its start time, then its title.
+ *
+ * Grid rather than inline, so the titles all begin on the same column however
+ * long the timestamps are — a list where `9:58` and `1:02:03` sit together
+ * ragged is much harder to scan down.
+ */
 .trf-rm-chapter {
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  column-gap: 10px;
+  align-items: start;
   width: 100%;
   text-align: left;
   padding: 0 0 0 12px;
-  margin-bottom: 17px;
+  margin-bottom: 15px;
   font-size: 13.5px;
   line-height: 1.32;
   color: var(--trf-rm-body);
+}
+
+.trf-rm-chaptertime {
+  color: var(--trf-rm-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+
+.trf-rm-chaptertitle {
+  min-width: 0;
+}
+
+.trf-rm-chapter:hover .trf-rm-chaptertime {
+  color: var(--trf-rm-body);
+}
+
+/* The current chapter's time carries the accent too, so the row reads as one
+   thing rather than a marker sitting next to unrelated text. */
+.trf-rm-chapter[aria-current="true"] .trf-rm-chaptertime {
+  color: var(--trf-rm-accent);
 }
 
 .trf-rm-chapter:hover {
@@ -404,6 +434,17 @@ html.trf-rm-open body {
   background: color-mix(in srgb, var(--trf-rm-ink) 9%, transparent);
   font-family: "Geist Mono", ui-monospace, monospace;
   font-size: 0.94em;
+}
+
+/* The inline key form. Transparent and border-free so it reads as part of the
+   chat panel rather than a window sitting inside it. */
+.trf-rm-keyframe {
+  display: block;
+  width: 100%;
+  min-height: 250px;
+  border: 0;
+  background: transparent;
+  color-scheme: light;
 }
 
 .trf-rm-status {

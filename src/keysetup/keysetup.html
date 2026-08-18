@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Connect the assistant</title>
+    <style>
+      /*
+       * Sized and coloured to sit inside Read Mode's chat panel as if it were
+       * part of it. It is not: this is an extension-origin document in an
+       * iframe, which is the whole point — the key is typed into a document the
+       * host page cannot read, and only an extension page may call
+       * `chrome.permissions.request()`.
+       */
+      :root {
+        --panel: #dedccf;
+        --ink: #063441;
+        --body: #586a6e;
+        --muted: #9aa19c;
+        --accent: #b12b28;
+        --slate: #697a81;
+        --edge: rgba(88, 106, 110, 0.28);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+      }
+
+      body {
+        font-family:
+          "Geist",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        font-size: 11px;
+        line-height: 1.45;
+        color: var(--body);
+        padding: 2px;
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      p {
+        margin: 0 0 8px;
+      }
+
+      a {
+        color: var(--ink);
+      }
+
+      label {
+        display: block;
+        margin: 0 0 3px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+
+      input,
+      select {
+        width: 100%;
+        font: inherit;
+        font-size: 11px;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+        border: 1px solid var(--edge);
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        color: var(--ink);
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid var(--slate);
+        outline-offset: 1px;
+      }
+
+      button {
+        font: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 6px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--slate);
+        color: #fff;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: #566469;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .link {
+        background: none;
+        color: var(--muted);
+        padding: 6px 4px;
+      }
+
+      .link:hover {
+        background: none;
+        color: var(--ink);
+      }
+
+      #status {
+        margin: 8px 0 0;
+        min-height: 1.3em;
+      }
+
+      #status[data-tone="error"] {
+        color: var(--accent);
+      }
+
+      .fine {
+        color: var(--muted);
+        font-size: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Connect the assistant</h1>
+    <p>
+      Paste an OpenRouter key to get a summary of this video and ask questions
+      about it. Free models cost nothing to run.
+      <a
+        href="https://openrouter.ai/settings/keys"
+        target="_blank"
+        rel="noreferrer"
+        >Get a key</a
+      >
+    </p>
+
+    <label for="key">API key</label>
+    <input
+      id="key"
+      type="password"
+      placeholder="sk-or-v1-…"
+      autocomplete="off"
+      spellcheck="false"
+    />
+
+    <div class="row">
+      <button id="save" type="button">Save and start</button>
+      <button id="settings" class="link" type="button">All settings…</button>
+    </div>
+
+    <p id="status" class="fine"></p>
+    <p class="fine">
+      Stored on this device only, never synced. It is not encrypted at rest.
+    </p>
+
+    <script src="keysetup.js"></script>
+  </body>
+</html>

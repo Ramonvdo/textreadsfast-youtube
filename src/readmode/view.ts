@@ -183,7 +183,7 @@ export function renderReadMode(
   const nav = el("nav", "trf-rm-nav");
   nav.setAttribute("aria-label", "Chapters");
   const title = el("h1", "trf-rm-title");
-  const navLabel = el("span", "trf-rm-navlabel", "Transcript");
+  const navLabel = el("span", "trf-rm-navlabel", "Chapters");
   const navNote = el("p", "trf-rm-navnote");
   const chapterList = el("ul", "trf-rm-chapters");
   nav.append(title, navLabel, navNote, chapterList);
@@ -281,8 +281,18 @@ export function renderReadMode(
 
       for (const chapter of next.chapters) {
         const item = el("li");
-        const button = el("button", "trf-rm-chapter", chapter.title);
+        const button = el("button", "trf-rm-chapter");
         button.type = "button";
+
+        // The start time is what makes this a way of moving around the video
+        // rather than a description of it.
+        const stamp = formatTimestamp(chapter.startMs);
+        button.append(
+          el("span", "trf-rm-chaptertime", stamp),
+          el("span", "trf-rm-chaptertitle", chapter.title),
+        );
+        button.setAttribute("aria-label", `${chapter.title}, at ${stamp}`);
+
         button.addEventListener("click", () =>
           handlers.onSeek(chapter.startMs),
         );
@@ -351,12 +361,24 @@ export function renderReadMode(
     if (state.kind === "loading" && next.messages.every((m) => m.text === "")) {
       chat.appendChild(el("p", "trf-rm-status", "Reading the transcript…"));
     } else if (state.kind === "needs-key") {
-      const note = el(
-        "p",
-        "trf-rm-status",
-        "Add an API key in settings to get a summary and ask questions about this video.",
-      );
-      chat.appendChild(note);
+      // Set up right here rather than sending anyone to a settings page. The
+      // form is an extension-origin iframe, which is what keeps the key out of
+      // this page's DOM and lets it ask for the provider permission — neither of
+      // which a form drawn by the content script could do.
+      if (state.setupUrl) {
+        const frame = el("iframe", "trf-rm-keyframe");
+        frame.src = state.setupUrl;
+        frame.title = "Connect the assistant";
+        chat.appendChild(frame);
+      } else {
+        chat.appendChild(
+          el(
+            "p",
+            "trf-rm-status",
+            "Add an API key in settings to get a summary and ask questions about this video.",
+          ),
+        );
+      }
     } else if (state.kind === "error") {
       chat.appendChild(
         el("p", "trf-rm-status trf-rm-status--error", state.message),
@@ -378,11 +400,13 @@ export function renderReadMode(
 
     title.textContent = next.title;
     navNote.textContent =
-      next.chapterSource === "derived"
-        ? "Sections derived from the transcript — this video has no chapters."
-        : next.chapterSource === "ai"
-          ? "Sections generated from the transcript."
-          : "";
+      next.chapters.length === 0
+        ? "This video has no chapters."
+        : next.chapterSource === "derived"
+          ? "Derived from the transcript — this video has no chapters of its own."
+          : next.chapterSource === "ai"
+            ? "Generated from the transcript."
+            : "";
     navNote.hidden = navNote.textContent === "";
 
     paintChapters(next, structural);

@@ -20,7 +20,15 @@ import { join, relative, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
 
-/** Directories that run inside youtube.com, in one world or the other. */
+/**
+ * Directories that run inside youtube.com, in one world or the other.
+ *
+ * `src/options`, `src/keysetup` and `src/library` are deliberately absent: they
+ * are extension-origin pages, the page cannot read them, and they are the only
+ * contexts where `chrome.permissions.request()` works at all. `src/keysetup` is
+ * embedded in Read Mode as an iframe for exactly that reason — the key is typed
+ * into a document youtube.com cannot see.
+ */
 const GUARDED = ["src/content", "src/page", "src/readmode"];
 
 const RULES = [

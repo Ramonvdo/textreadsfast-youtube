@@ -49,7 +49,10 @@ export interface ChatMessage {
 export type ChatState =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "needs-key" }
+  /** `setupUrl` is an extension page rendered inline so the key can be entered
+   *  without leaving the video. Optional so the harness can render this state
+   *  without an extension around it. */
+  | { kind: "needs-key"; setupUrl?: string }
   | { kind: "error"; message: string; retryable: boolean };
 
 export interface ReadModeModel {

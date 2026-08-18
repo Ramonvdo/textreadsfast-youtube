@@ -40,9 +40,16 @@ async function main(): Promise<void> {
   const response = await fetch("fixtures/session.json");
   const raw = (await response.json()) as ReadModeModel;
 
+  // `?state=needs-key` renders the inline key form instead of a summary, so that
+  // state can be looked at too rather than only reasoned about.
+  const wanted = new URLSearchParams(window.location.search).get("state");
+
   const model: ReadModeModel = {
     ...raw,
     chapters: chaptersWithEnds(raw.chapters, raw.durationMs),
+    ...(wanted === "needs-key"
+      ? { messages: [], chat: { kind: "needs-key", setupUrl: "keysetup.html" } }
+      : {}),
   };
   window.__model = model;
 
