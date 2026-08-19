@@ -48,9 +48,21 @@ jobs:
             exit 1
           fi
 
-      # Drift and boundary checks run here too: the store package is exactly
-      # what users install, so it is the last place either can be caught.
-      - run: pnpm run check
+      # Deliberately NOT `pnpm run check`.
+      #
+      # That script includes `check-drift`, which compares `src/reader-core/`
+      # against a checkout of the desktop app. There is no such checkout on a
+      # runner, and the script exits 2 rather than pretending otherwise — so
+      # running it here would fail every release for a reason that has nothing
+      # to do with the release. Drift is a two-repository concern and belongs to
+      # the machine that has both; run `pnpm run check` locally before tagging.
+      #
+      # The boundary check does belong here: the package built below is exactly
+      # what users install, so it is the last chance to catch the API key
+      # reaching a content script.
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm run check-boundaries
 
       - run: pnpm run build
 
