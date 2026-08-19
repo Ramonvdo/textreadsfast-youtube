@@ -18,7 +18,7 @@
 import type { ChatTurn, ErrorCode } from "../shared/aiProtocol";
 
 /** Sent for attribution only when talking to OpenRouter, which asks for them. */
-const ATTRIBUTION_URL = "https://github.com/rdooren/textreadsfast";
+const ATTRIBUTION_URL = "https://github.com/Ramonvdo/textreadsfast-youtube";
 const ATTRIBUTION_TITLE = "TextReadsFast for YouTube";
 
 export interface ChatRequest {

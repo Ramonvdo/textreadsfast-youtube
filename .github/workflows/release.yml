@@ -1,0 +1,77 @@
+name: release
+
+# Build a Chrome-Web-Store-ready zip on a version tag and attach it to a draft
+# release, so shipping an update is one tag rather than a manual build.
+#
+#   git tag v0.1.1 && git push origin v0.1.1
+#
+# The draft is deliberate: nothing goes live until you review it and press
+# publish. Uploading to the store itself is a separate, human-reviewed step —
+# see PUBLISHING.md.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The manifest version is what the Chrome Web Store actually reads. A tag
+      # that disagrees with it produces a zip the store either rejects as a
+      # duplicate or accepts under the wrong version — both discovered long
+      # after the fact, so fail here instead.
+      - name: Tag and manifest version must agree
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          manifest=$(node -p "require('./src/manifest.json').version")
+          echo "tag=$tag manifest=$manifest"
+          if [ "$tag" != "$manifest" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match manifest version $manifest. Bump src/manifest.json (and package.json) before tagging."
+            exit 1
+          fi
+
+      # Drift and boundary checks run here too: the store package is exactly
+      # what users install, so it is the last place either can be caught.
+      - run: pnpm run check
+
+      - run: pnpm run build
+
+      # Zipped from *inside* dist/, so manifest.json sits at the root of the
+      # archive. A zip containing a top-level `dist/` folder is the single most
+      # common Chrome Web Store upload rejection — the store looks for the
+      # manifest at the root and finds nothing.
+      - name: Package for the Chrome Web Store
+        run: |
+          test -f dist/manifest.json || { echo "::error::dist/manifest.json missing"; exit 1; }
+          cd dist && zip -r -q "../textreadsfast-youtube-${GITHUB_REF_NAME}.zip" . && cd ..
+          unzip -l "textreadsfast-youtube-${GITHUB_REF_NAME}.zip" | head -20
+          # Prove the manifest is at the archive root before anyone uploads it.
+          unzip -l "textreadsfast-youtube-${GITHUB_REF_NAME}.zip" | grep -qE ' manifest\.json$' \
+            || { echo "::error::manifest.json is not at the zip root"; exit 1; }
+
+      - name: Draft release with the store package
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: textreadsfast-youtube-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -6,6 +6,7 @@
   "description": "Read YouTube subtitles one word at a time, at a fixed focal point",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "package": "node scripts/build.mjs && node scripts/package.mjs",
     "watch": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

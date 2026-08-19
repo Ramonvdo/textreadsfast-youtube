@@ -7,7 +7,7 @@ Guidance for AI coding assistants working in this repository.
 A browser extension that replaces YouTube's captions with an RSVP reader — one
 word at a time, with the Optimal Recognition Point pinned to a fixed screen
 position. Companion to the desktop app
-[TextReadsFast](https://github.com/rdooren/textreadsfast).
+[TextReadsFast](https://github.com/Ramonvdo/textreadsfast).
 
 The crucial difference from the desktop app: **YouTube supplies the whole
 transcript with timings up front.** There is no transcription, no queue, no
@@ -25,6 +25,7 @@ pnpm run typecheck
 pnpm test               # caption parsing and word lookup
 pnpm run check-drift    # reader-core vs the desktop app
 pnpm run check          # all of the above
+pnpm run shoot          # screenshot both harnesses, assert their geometry
 pnpm run format         # prettier; `src/reader-core` is ignored on purpose
 ```
 
@@ -125,6 +126,42 @@ pnpm run format         # prettier; `src/reader-core` is ignored on purpose
 - **The overlay skips redrawing a word it is already showing**, and a paused
   video presents no frames. Anything that changes what the stage should look like
   has to clear `lastText` — `apply()` does it unconditionally for that reason.
+
+- **A new reading mode is three places, and the compiler names all three.** The
+  `ReadingMode` union, a `MODE_LABELS` entry (a `Record` keyed by the union, so
+  the settings picker cannot go stale), and a `case` in `render()`'s switch. That
+  switch ends in a `never` check on purpose: it used to be an if/else whose
+  `else` was RSVP, so a mode added to the type compiled and silently rendered as
+  something else. `THEME_LABELS` and the field chain in `options.ts` are guarded
+  the same way.
+
+- **Bionic, Plain, Highlighter and Karaoke share one renderer.** `renderLine`
+  emits `.trf-lw` per word with `--past` / `--current` / `--future`, and the
+  mode's CSS block decides what that means. A fifth line mode is a stylesheet
+  block, not a fifth copy of the loop.
+
+- **A mode-scoped rule outranks `.trf-lw--current`.**
+  `.trf-reader[data-mode="plain"] .trf-lw` is two selectors to that rule's one,
+  so a mode that colours its words has to scope its current-word rule too. Plain
+  shipped a faded current word for exactly this reason, caught in `pnpm run
+shoot` rather than by any test.
+
+- **Highlighter's padding is on every word, not on the marked one.** Padding one
+  word alone slides every word after it sideways once per word. `scripts/shoot.py`
+  measures this and fails on a width change over 0.6px, because a still
+  screenshot cannot show it.
+
+- **Custom theme colours are written as `--trf-custom-*`**, never as `--bg` and
+  friends. A `[data-theme="custom"]` block maps them across, so all eight
+  palettes are still defined in one stylesheet rather than half in CSS and half
+  in TypeScript. `apply()` clears them for every other theme.
+
+- **Charts with text in them must be drawn at their real pixel width.**
+  `preserveAspectRatio="none"` on a fixed 320-unit viewBox at `width: 100%`
+  scaled a 1080px panel 3.4x horizontally and 1x vertically — rectangles survive
+  that, glyphs do not, and "Wed" arrived as a smeared "We". `mountBarChart` in
+  `library.ts` measures with a `ResizeObserver`; only `renderCoverageBar`, which
+  is nothing but rectangles, still stretches.
 
 ## Design rules
 

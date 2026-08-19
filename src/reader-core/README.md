@@ -3,7 +3,7 @@
 **Copied from the desktop app. Do not edit here.**
 
 These files are the reading engine shared with
-[TextReadsFast](https://github.com/rdooren/textreadsfast) — the pivot maths that
+[TextReadsFast](https://github.com/Ramonvdo/textreadsfast) — the pivot maths that
 decides which letter of a word the eye should land on, and the alignment that
 puts it at a fixed screen position.
 

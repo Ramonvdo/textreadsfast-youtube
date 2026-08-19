@@ -15,6 +15,13 @@ public/fonts
 # not edited here at all: change them upstream and copy them across.
 src/reader-core
 
+# The default summary prompt, kept as authored.
+#
+# Prose that is sent to a model verbatim, not documentation about it. Prettier
+# reflows markdown — it rewrites `*Bad:*` as `_Bad:_` and inserts blank lines —
+# and every one of those characters ends up in the request.
+AI-video-viewer-default-initial-summary-prompt.md
+
 # Misc
 .DS_Store
 *.log
