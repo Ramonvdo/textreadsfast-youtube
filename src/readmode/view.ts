@@ -286,6 +286,43 @@ export function renderReadMode(
     handlers.onAddNote(text);
   });
 
+  /*
+   * Start typing anywhere and the note box takes it.
+   *
+   * Click the scrubber to move through the video, then type — the keystroke
+   * lands in the note box rather than being swallowed. Without this the first
+   * word of every note is lost to whatever had focus.
+   *
+   * CAPTURE PHASE, on purpose. The moved player still carries YouTube's own
+   * keyboard handlers, and by the bubble phase `k` has already paused the
+   * video. Capturing at the root claims the key before the player sees it.
+   *
+   * Space is deliberately left alone. It is play/pause, it is the control
+   * people reach for most while taking notes, and a note starting with a space
+   * is not a note anyone wanted.
+   */
+  const typeToNote = (event: KeyboardEvent): void => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    // A single character: letters, digits, punctuation. Never "Enter",
+    // "ArrowLeft", "Escape", "F5" and the rest, which all have longer names.
+    if (event.key.length !== 1 || event.key === " ") return;
+
+    const target = event.target;
+    const alreadyTyping =
+      target instanceof HTMLElement &&
+      (target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable);
+    if (alreadyTyping) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    noteInput.focus();
+    noteInput.value += event.key;
+  };
+
+  root.addEventListener("keydown", typeToNote, true);
+
   const noteList = el("ul", "trf-rm-notelist");
   const notesEmpty = el(
     "p",
@@ -597,6 +634,7 @@ export function renderReadMode(
     },
     destroy() {
       geometry?.disconnect();
+      root.removeEventListener("keydown", typeToNote, true);
       root.remove();
     },
   };

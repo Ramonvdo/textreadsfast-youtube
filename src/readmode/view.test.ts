@@ -209,6 +209,98 @@ describe("notes", () => {
   });
 });
 
+describe("typing anywhere starts a note", () => {
+  const press = (
+    view: { root: HTMLElement },
+    key: string,
+    from?: Element,
+    init = {},
+  ) => {
+    const target = from ?? view.root;
+    const event = new KeyboardEvent("keydown", {
+      key,
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    target.dispatchEvent(event);
+    return event;
+  };
+
+  const noteBox = (view: { root: HTMLElement }) =>
+    view.root.querySelector<HTMLInputElement>(".trf-rm-noteinput")!;
+
+  it("catches the first letter instead of losing it", () => {
+    const view = renderReadMode(model(), handlers());
+    document.body.appendChild(view.root);
+
+    press(view, "h");
+    press(view, "i");
+
+    expect(noteBox(view).value).toBe("hi");
+    expect(document.activeElement).toBe(noteBox(view));
+  });
+
+  it("claims the key before the video can act on it", () => {
+    const view = renderReadMode(model(), handlers());
+    document.body.appendChild(view.root);
+    // `k` is YouTube's play/pause; it must not reach the player.
+    const event = press(view, "k");
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  /*
+   * Space is play/pause, the control people reach for most while taking notes,
+   * and a note beginning with a space is not a note anyone wanted.
+   */
+  it("leaves space to the video", () => {
+    const view = renderReadMode(model(), handlers());
+    document.body.appendChild(view.root);
+
+    const event = press(view, " ");
+    expect(event.defaultPrevented).toBe(false);
+    expect(noteBox(view).value).toBe("");
+  });
+
+  it("leaves navigation and shortcuts alone", () => {
+    const view = renderReadMode(model(), handlers());
+    document.body.appendChild(view.root);
+
+    for (const key of ["ArrowRight", "Enter", "Escape", "Tab", "F5"]) {
+      expect(press(view, key).defaultPrevented).toBe(false);
+    }
+    expect(
+      press(view, "c", undefined, { ctrlKey: true }).defaultPrevented,
+    ).toBe(false);
+    expect(noteBox(view).value).toBe("");
+  });
+
+  // Clicking into the chat and typing must type in the chat.
+  it("keeps out of the way once something else has focus", () => {
+    const view = renderReadMode(model(), handlers());
+    document.body.appendChild(view.root);
+
+    const compose =
+      view.root.querySelector<HTMLTextAreaElement>(".trf-rm-composebox")!;
+    compose.focus();
+
+    expect(press(view, "x", compose).defaultPrevented).toBe(false);
+    expect(noteBox(view).value).toBe("");
+  });
+
+  it("does not steal from the note box itself", () => {
+    const view = renderReadMode(model(), handlers());
+    document.body.appendChild(view.root);
+    const box = noteBox(view);
+    box.value = "already";
+    box.focus();
+
+    expect(press(view, "y", box).defaultPrevented).toBe(false);
+    // Untouched: the browser types it normally.
+    expect(box.value).toBe("already");
+  });
+});
+
 describe("subtitles", () => {
   const subs = (view: { root: HTMLElement }) =>
     view.root.querySelector<HTMLButtonElement>(".trf-rm-subs")!;
