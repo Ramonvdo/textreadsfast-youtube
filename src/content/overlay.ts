@@ -191,14 +191,6 @@ export class ReaderOverlay {
       settings.textCase === "upper" ? "uppercase" : "none",
     );
     this.root.style.setProperty("--trf-outline", outlineShadow(settings));
-    this.root.style.setProperty(
-      "--trf-outline-filter",
-      outlineFilter(settings),
-    );
-    this.root.style.setProperty(
-      "--trf-outline-halo",
-      outlineFilter(settings, "halo"),
-    );
     this.applyCustomPalette(settings);
 
     this.guideTop.style.display = settings.showPivotGuides ? "" : "none";
@@ -495,54 +487,6 @@ function outlineShadow(settings: Settings): string {
   // as a sticker pasted onto the video.
   steps.push(`0 ${width}px ${width * 1.6}px rgba(0, 0, 0, 0.45)`);
   return steps.join(", ");
-}
-
-/**
- * The same outline, as a filter, for text that has no colour of its own.
- *
- * The Pop theme fills its glyphs with a gradient using `background-clip: text`,
- * which requires `color: transparent` — and a `text-shadow` paints *behind* the
- * glyph, so it would show straight through the transparent letterform as a
- * grey ghost rather than an outline around it.
- *
- * `drop-shadow` operates on the composited result instead, so it traces the
- * gradient-filled shape. Four are enough where the shadow version needs eight:
- * each filter in a chain applies to the output of the one before it, so the
- * corners are filled by the shadows of the shadows.
- */
-function outlineFilter(
-  settings: Settings,
-  kind: "plain" | "halo" = "plain",
-): string {
-  const width = Math.max(0, settings.textOutline);
-  if (width === 0) return "none";
-
-  const ring = (size: number, ink: string): string[] => [
-    `drop-shadow(${size}px 0 0 ${ink})`,
-    `drop-shadow(-${size}px 0 0 ${ink})`,
-    `drop-shadow(0 ${size}px 0 ${ink})`,
-    `drop-shadow(0 -${size}px 0 ${ink})`,
-  ];
-
-  const black = "rgba(0, 0, 0, 0.95)";
-  if (kind === "plain") return ring(width, black).join(" ");
-
-  /*
-   * A light ring inside a dark one, which is the look burned-in social captions
-   * have converged on: the pale edge lifts the fill off the picture, and the
-   * dark edge outside it keeps the pale edge itself from vanishing against a
-   * bright frame.
-   *
-   * Chaining works because each filter applies to the *output* of the one
-   * before, so the second ring traces the first rather than the glyph — which
-   * is also why the outer pass only needs to be slightly larger than the inner.
-   */
-  const inner = Math.max(1, Math.round(width * 0.6));
-  return [
-    ...ring(inner, "rgba(255, 255, 255, 0.95)"),
-    ...ring(Math.max(1, Math.round(width * 0.5)), black),
-    `drop-shadow(0 ${width}px ${width * 1.4}px rgba(0, 0, 0, 0.55))`,
-  ].join(" ");
 }
 
 function pivotSpan(char: string): HTMLSpanElement {

@@ -131,10 +131,6 @@ const CUSTOM_PANELS: Array<[string, Partial<Settings>]> = [
     { ...BUILT_IN("caption-box"), autoScale: false, fontSize: 26 },
   ],
   [
-    "Pop — uppercase, gradient, no card",
-    { ...BUILT_IN("pop"), autoScale: false, fontSize: 36 },
-  ],
-  [
     "Custom — cool dark, low opacity",
     {
       theme: "custom",

@@ -288,66 +288,6 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
     },
   },
   {
-    id: "clarity",
-    name: "Clarity",
-    blurb: "Big, high contrast, letter shapes drawn for low vision.",
-    builtIn: true,
-    settings: {
-      mode: "rsvp",
-      theme: "contrast",
-      font: "atkinson_hyperlegible",
-      fontSize: 32,
-      letterSpacing: 1,
-      autoScale: true,
-      verticalPosition: 8,
-      boxWidth: 70,
-      contextBefore: 1,
-      contextAfter: 2,
-      contextOpacity: 0.55,
-      bionicAccent: true,
-      backgroundOpacity: 0.88,
-      ...UNUSED_PALETTE,
-      ...PLAIN_TYPE,
-      showPivotGuides: true,
-      removeFillers: true,
-      hideNativeCaptions: true,
-      readerInReadMode: true,
-    },
-  },
-  {
-    id: "quiet-caption",
-    name: "Quiet Caption",
-    blurb:
-      "An ordinary subtitle that holds still and changes a line at a time. Nothing moves.",
-    builtIn: true,
-    settings: {
-      mode: "plain",
-      theme: "focus",
-      font: "literata",
-      fontSize: 26,
-      letterSpacing: 0,
-      autoScale: true,
-      verticalPosition: 8,
-      boxWidth: 78,
-      // Static mode builds its own line, so neither count is read. Left at
-      // sensible values rather than zero, so switching away from this profile
-      // to a sliding mode does not land on an empty window.
-      contextBefore: 3,
-      contextAfter: 4,
-      contextOpacity: 0.48,
-      bionicAccent: true,
-      // Barely a card at all, so the words read as part of the picture rather
-      // than as a panel sitting on top of it.
-      backgroundOpacity: 0.42,
-      showPivotGuides: false,
-      removeFillers: true,
-      hideNativeCaptions: true,
-      readerInReadMode: true,
-      ...UNUSED_PALETTE,
-      ...PLAIN_TYPE,
-    },
-  },
-  {
     id: "highlighter",
     name: "Highlighter",
     blurb: "A block on the word being spoken. Holds up at speed.",
@@ -397,8 +337,10 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       contextAfter: 4,
       contextOpacity: 0.48,
       bionicAccent: true,
-      // A band you can see the picture through, not a panel sitting on it.
-      backgroundOpacity: 0.55,
+      // Dark and nearly solid. Gold on a pale, see-through band washed out the
+      // moment the picture behind it was bright, which is exactly when a
+      // caption most needs to be readable.
+      backgroundOpacity: 0.92,
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -445,46 +387,6 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       // None needed: nothing shows through a solid box for it to fight.
       textOutline: 0,
       lineWords: 7,
-    },
-  },
-  {
-    id: "pop",
-    name: "Pop",
-    blurb:
-      "Big uppercase over the picture, no card. Two or three words at a time.",
-    builtIn: true,
-    settings: {
-      mode: "plain",
-      theme: "pop",
-      // Atkinson rather than Geist, because Geist ships no weight above 600 and
-      // asking for more only gets synthetic bold, which came out visibly
-      // lighter than this style wants. Atkinson has a real 700 -- and being
-      // drawn for low vision is no handicap for a caption over video.
-      font: "atkinson_hyperlegible",
-      fontSize: 38,
-      letterSpacing: 0.5,
-      autoScale: true,
-      verticalPosition: 16,
-      boxWidth: 84,
-      contextBefore: 3,
-      contextAfter: 4,
-      contextOpacity: 0.48,
-      bionicAccent: true,
-      // No card at all. The outline is what makes this readable instead.
-      backgroundOpacity: 0,
-      showPivotGuides: false,
-      removeFillers: true,
-      hideNativeCaptions: true,
-      readerInReadMode: true,
-      ...UNUSED_PALETTE,
-      fontStyle: "normal",
-      textCase: "upper",
-      textWeight: 700,
-      // At maximum: with no card behind it the outline is the only thing
-      // separating the words from the picture, and it doubles as visual weight.
-      textOutline: 4,
-      // Short and punchy. A long line in this size would cover the picture.
-      lineWords: 3,
     },
   },
 ];

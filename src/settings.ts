@@ -17,7 +17,6 @@ export type ReaderTheme =
   | "nocturne"
   | "lyric"
   | "caption"
-  | "pop"
   | "custom";
 
 /**
@@ -56,7 +55,6 @@ export const THEME_LABELS: Record<ReaderTheme, string> = {
   nocturne: "Nocturne (deep blue-grey)",
   lyric: "Lyric (gold on a blue band)",
   caption: "Caption (white on solid black)",
-  pop: "Pop (cyan gradient, no card)",
   custom: "Custom (your own colours)",
 };
 

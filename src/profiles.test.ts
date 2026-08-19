@@ -122,7 +122,7 @@ describe("applying a profile", () => {
   // read as a bug rather than as a theme change.
   it("leaves enabled and language alone", async () => {
     await chrome.storage.sync.set({ enabled: false, language: "nl" });
-    await applyProfile(byId("clarity"));
+    await applyProfile(byId("night-study"));
     const settings = await loadSettings();
     expect(settings.enabled).toBe(false);
     expect(settings.language).toBe("nl");
