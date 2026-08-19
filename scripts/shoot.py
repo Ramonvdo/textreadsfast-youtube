@@ -2,8 +2,8 @@
 
 Three jobs, deliberately separated:
 
-1. Write screenshots to dev-shots/, for eyeballing Read Mode next to
-   video-viewer-concept.jpg, and the six reading modes next to each other.
+1. Write screenshots to dev-shots/, for eyeballing Read Mode next to the
+   design concept, and the six reading modes next to each other.
 2. Assert the column boundaries land where the concept puts them. This is the
    automated gate. A per-pixel diff against a hand-composed JPEG would never
    converge, and chasing that number would make the design worse, so the machine
@@ -49,8 +49,8 @@ JUMP_TOLERANCE = 0.6
 WIDTH = 1920
 HEIGHT = 950
 
-# Column boundaries read off video-viewer-concept.jpg (native width 1912) and
-# scaled to the capture viewport. The tolerance is generous because the concept
+# Column boundaries read off the design concept (native width 1912) and scaled
+# to the capture viewport. The tolerance is generous because the concept
 # is a hand-composed mock, not a rendering of a grid.
 TOLERANCE = 14
 TARGETS = [

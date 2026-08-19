@@ -2,7 +2,7 @@
  * Renders Read Mode from a fixture, with no YouTube page and no extension.
  *
  * This is the whole reason `view.ts` is a pure function of a plain object: the
- * design can be screenshotted and compared against `video-viewer-concept.jpg`
+ * design can be screenshotted and compared against the design concept
  * without a browser profile, a login, or a live video. Dev-only — built behind
  * `--dev` and never listed in the manifest.
  */

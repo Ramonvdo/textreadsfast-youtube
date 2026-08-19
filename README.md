@@ -443,8 +443,11 @@ draft release:
 git tag v0.1.1 && git push origin v0.1.1
 ```
 
-Publishing to the store itself is a manual, human-reviewed process — see
-[PUBLISHING.md](PUBLISHING.md).
+The zip has `manifest.json` at its root and forward slashes throughout, and the
+workflow asserts both before attaching it — the two things a store upload is
+usually rejected for.
+
+`pnpm run package` builds the same zip locally.
 
 ## Security
 

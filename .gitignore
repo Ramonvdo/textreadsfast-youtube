@@ -9,4 +9,17 @@ dist
 
 # Screenshot output from scripts/shoot.py
 dev-shots/
+
+# Kept local, deliberately.
+#
+# This repository is the extension's public face: what it is, how to run it, and
+# the source. Everything below is about *shipping* it rather than using it, and
+# none of it means anything to someone who downloads the extension.
+#
+# All of it still lives on the maintainer's machine -- these are untracked, not
+# deleted. Back them up somewhere other than a fresh clone.
+PUBLISHING.md
+store-assets/
+video-viewer-concept.jpg
+AI-video-viewer-default-initial-summary-prompt.md
 __pycache__/
