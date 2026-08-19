@@ -121,7 +121,12 @@ export interface DevicePrefs {
    * subfolder is what can be automated; anywhere else needs the save dialog.
    */
   exportFolder: string;
-  /** Open the save dialog every time, so any folder on disk can be chosen. */
+  /**
+   * Open the save dialog every time, so any folder on disk can be chosen.
+   *
+   * The default, and the only route to a folder outside Downloads. When this is
+   * on, `exportFolder` does not apply — the dialog decides.
+   */
   exportAskWhere: boolean;
 }
 
@@ -132,7 +137,10 @@ export const DEVICE_DEFAULTS: DevicePrefs = {
   // the notes people mostly open it to reread.
   exportTranscript: false,
   exportFolder: "",
-  exportAskWhere: false,
+  // On by default: it is the only option that can reach a folder outside
+  // Downloads, which is where a notes vault usually lives. Chrome remembers the
+  // last folder chosen, so after the first export it is one keypress.
+  exportAskWhere: true,
 };
 
 const DEVICE_KEYS = {

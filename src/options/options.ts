@@ -400,6 +400,16 @@ async function mountDevicePrefs(): Promise<void> {
 
   const prefs = await loadDevicePrefs();
 
+  // The folder field decides nothing while the save dialog is on, and two
+  // controls that both look live is a small lie about which one wins.
+  let folderRow: HTMLElement | null = null;
+  let folderInput: HTMLInputElement | null = null;
+
+  const syncFolderRow = (askWhere: boolean): void => {
+    if (folderRow) folderRow.dataset.inactive = String(askWhere);
+    if (folderInput) folderInput.disabled = askWhere;
+  };
+
   const text = (
     key: "exportFolder",
     label: string,
@@ -424,6 +434,8 @@ async function mountDevicePrefs(): Promise<void> {
     control.append(input);
 
     wrapper.append(copy, control);
+    folderRow = wrapper;
+    folderInput = input;
     return wrapper;
   };
 
@@ -447,6 +459,7 @@ async function mountDevicePrefs(): Promise<void> {
     name.htmlFor = input.id;
     input.addEventListener("change", () => {
       void saveDevicePrefs({ [key]: input.checked });
+      if (key === "exportAskWhere") syncFolderRow(input.checked);
     });
     control.append(input);
 
@@ -465,16 +478,16 @@ async function mountDevicePrefs(): Promise<void> {
       "Include the transcript in exports",
       "Append the whole spoken transcript to the end of an exported file. Off by default: it is the largest thing in the file and buries the notes.",
     ),
-    text(
-      "exportFolder",
-      "Export folder",
-      "A folder inside Downloads, for example Obsidian/Inbox. Chrome does not let an extension write anywhere else on its own — to reach a vault outside Downloads, switch on Ask where to save.",
-      "Obsidian/Inbox",
-    ),
     toggle(
       "exportAskWhere",
       "Ask where to save",
-      "Open the save dialog on every export, so a file can go to any folder on this computer. Chrome remembers the last one you picked.",
+      "Open the save dialog on every export, so a file can go to any folder on this computer — a notes vault, for instance. Chrome remembers the last one you picked, so after the first time it is one keypress.",
+    ),
+    text(
+      "exportFolder",
+      "Export folder",
+      "Used only when the save dialog is off. A folder inside Downloads, for example Obsidian/Inbox — Chrome does not let an extension write anywhere else on its own.",
+      "Obsidian/Inbox",
     ),
     toggle(
       "statsTracking",
@@ -482,6 +495,8 @@ async function mountDevicePrefs(): Promise<void> {
       "Record watch time, coverage and how often you return to a video. Everything stays on this device; turning it off stops the recording, it does not merely hide it.",
     ),
   );
+
+  syncFolderRow(prefs.exportAskWhere);
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(

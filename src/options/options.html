@@ -176,6 +176,12 @@
         resize: vertical;
       }
 
+      /* A control that does not currently decide anything should not look as
+         live as the one that does. */
+      .row[data-inactive="true"] {
+        opacity: 0.5;
+      }
+
       #group-device input[type="text"],
       #group-ai input[type="password"],
       #group-ai input[type="url"] {
