@@ -50,6 +50,17 @@ async function main(): Promise<void> {
     ...(wanted === "needs-key"
       ? { messages: [], chat: { kind: "needs-key", setupUrl: "keysetup.html" } }
       : {}),
+    ...(wanted === "error"
+      ? {
+          messages: [],
+          chat: {
+            kind: "error" as const,
+            message: "Provider returned error (402)",
+            retryable: true,
+            setupUrl: "keysetup.html",
+          },
+        }
+      : {}),
   };
   window.__model = model;
 
@@ -59,6 +70,7 @@ async function main(): Promise<void> {
     onDeleteNote: () => undefined,
     onSendChat: () => undefined,
     onExport: () => undefined,
+    onRegenerate: () => undefined,
     onToggleSubtitles: () => undefined,
     onClose: () => undefined,
   });

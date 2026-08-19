@@ -343,7 +343,16 @@ function runChat(
                 kind: "needs-key",
                 setupUrl: chrome.runtime.getURL("keysetup.html"),
               }
-            : { kind: "error", message, retryable: code !== "bad_key" },
+            : {
+                kind: "error",
+                message,
+                // A bad key is not worth retrying with the same key, but every
+                // other failure here is worth one more attempt.
+                retryable: code !== "bad_key",
+                // Almost every provider failure is a key, a model or a credit
+                // balance, and all three are fixed in the same panel.
+                setupUrl: chrome.runtime.getURL("keysetup.html"),
+              },
       });
     },
   });

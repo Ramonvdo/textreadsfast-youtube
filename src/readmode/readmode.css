@@ -523,6 +523,18 @@ html.trf-rm-open body {
   color: var(--trf-rm-accent);
 }
 
+.trf-rm-erroractions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.trf-rm-erroractions .trf-rm-again {
+  margin-top: 0;
+}
+
 .trf-rm-statusbtn {
   margin-top: 6px;
   padding: 4px 12px;

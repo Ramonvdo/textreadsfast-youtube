@@ -153,7 +153,10 @@ async function failureMessage(response: Response): Promise<string> {
         (nested ? asString(nested.message) : null) ??
         asString(root.error) ??
         asString(root.message);
-      if (message) return message;
+      // The status is kept alongside the provider's prose: "Provider returned
+      // error" on its own tells the reader nothing they can act on, whereas a
+      // 401 or a 402 points straight at the key or the credit balance.
+      if (message) return `${message} (${response.status})`;
     }
   } catch {
     // Not JSON. An HTML error page is worse than useless in a chat bubble, so

@@ -384,6 +384,54 @@ describe("chat", () => {
     );
   });
 
+  // "Provider returned error" with nothing beside it is a dead end. Nearly
+  // every failure here is a key, a model or a credit balance, so the fix has to
+  // be reachable from the error itself.
+  it("offers a way out of an error", () => {
+    const h = handlers();
+    const view = renderReadMode(
+      model({
+        chat: {
+          kind: "error",
+          message: "Provider returned error (402)",
+          retryable: true,
+          setupUrl: "keysetup.html",
+        },
+      }),
+      { ...h, onRegenerate: h.onExport },
+    );
+
+    const fix =
+      view.root.querySelector<HTMLButtonElement>(".trf-rm-statusbtn")!;
+    expect(fix.textContent).toContain("Fix");
+    // The settings panel opens in place rather than sending anyone away.
+    expect(view.root.querySelector(".trf-rm-keyframe")).toBeNull();
+    fix.click();
+    expect(
+      view.root.querySelector<HTMLIFrameElement>(".trf-rm-keyframe")?.src,
+    ).toContain("keysetup.html");
+  });
+
+  it("offers a retry only when retrying could help", () => {
+    const h = handlers();
+    const withRetry = renderReadMode(
+      model({
+        chat: { kind: "error", message: "Rate limited.", retryable: true },
+      }),
+      { ...h, onRegenerate: h.onExport },
+    );
+    expect(withRetry.root.querySelector(".trf-rm-again")).not.toBeNull();
+
+    // A bad key will fail identically on the second attempt.
+    const noRetry = renderReadMode(
+      model({
+        chat: { kind: "error", message: "Bad key.", retryable: false },
+      }),
+      { ...h, onRegenerate: h.onExport },
+    );
+    expect(noRetry.root.querySelector(".trf-rm-again")).toBeNull();
+  });
+
   it("shows an error rather than an empty panel", () => {
     const view = renderReadMode(
       model({

@@ -456,6 +456,39 @@ export function renderReadMode(
       chat.appendChild(
         el("p", "trf-rm-status trf-rm-status--error", state.message),
       );
+
+      /*
+       * An error must offer a way out of itself.
+       *
+       * "Provider returned error" with nothing beside it is a dead end: almost
+       * every failure here is a key, a model or a credit balance, and all three
+       * are fixed in the same panel. So the fix opens inline rather than
+       * sending anyone off to a settings page to guess which switch it was.
+       */
+      const actions = el("div", "trf-rm-erroractions");
+
+      if (state.setupUrl) {
+        const fix = el("button", "trf-rm-statusbtn", "Fix in settings");
+        fix.type = "button";
+        fix.addEventListener("click", () => {
+          fix.remove();
+          const frame = el("iframe", "trf-rm-keyframe");
+          frame.src = state.setupUrl as string;
+          frame.title = "Assistant settings";
+          chat.appendChild(frame);
+          chat.scrollTop = chat.scrollHeight;
+        });
+        actions.appendChild(fix);
+      }
+
+      if (state.retryable && handlers.onRegenerate) {
+        const again = el("button", "trf-rm-again", "Try again");
+        again.type = "button";
+        again.addEventListener("click", () => handlers.onRegenerate?.());
+        actions.appendChild(again);
+      }
+
+      if (actions.childElementCount > 0) chat.appendChild(actions);
     }
 
     /*

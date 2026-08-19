@@ -53,7 +53,13 @@ export type ChatState =
    *  without leaving the video. Optional so the harness can render this state
    *  without an extension around it. */
   | { kind: "needs-key"; setupUrl?: string }
-  | { kind: "error"; message: string; retryable: boolean };
+  | {
+      kind: "error";
+      message: string;
+      retryable: boolean;
+      /** The inline settings page, so an error is never a dead end. */
+      setupUrl?: string;
+    };
 
 export interface ReadModeModel {
   videoId: string;
