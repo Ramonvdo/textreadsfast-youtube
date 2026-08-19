@@ -79,12 +79,15 @@ export function newRequestId(): string {
 /**
  * How the model is told about the video.
  *
- * One system turn carrying the transcript, rather than a fake first user turn:
- * providers weight system content differently, and it keeps the visible chat
- * history exactly what the user actually said.
+ * A USER turn, not a system one. The first version put the whole transcript in
+ * the system message, and a free model answered a long video with `<pad>`
+ * repeated to its context limit — while the chapter call, which sends its text
+ * as a user turn, handled the same video on the same model perfectly. A system
+ * message is meant for instructions; tens of thousands of tokens of transcript
+ * in one is not what providers tune for.
  */
-export function buildSystemTurn(system: string, context: ChatContext): string {
-  const parts = [system.trim(), "", "---", "", `# Video: ${context.title}`];
+export function buildContextTurn(context: ChatContext): string {
+  const parts = [`# Video: ${context.title}`];
   if (context.channel) parts.push(`Channel: ${context.channel}`);
   parts.push("", "# Transcript", "", context.transcript);
 

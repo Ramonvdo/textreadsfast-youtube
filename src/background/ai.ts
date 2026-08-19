@@ -13,12 +13,13 @@
  */
 
 import {
-  buildSystemTurn,
+  buildContextTurn,
   type AiRequest,
   type AiResponse,
   type ChatTurn,
 } from "../shared/aiProtocol";
 import { ProviderError, streamChat } from "./provider";
+import { RunawayGuard } from "./guard";
 import { pickAlternative, resolveModel } from "./models";
 import { getConfig, hasOriginPermission } from "./secrets";
 
@@ -92,7 +93,11 @@ export function handleAiPort(port: chrome.runtime.Port): void {
       // prompt", which keeps the default in one place instead of two.
       const system = request.system.trim() || config.summaryPrompt;
       const messages: ChatTurn[] = [
-        { role: "system", content: buildSystemTurn(system, request.context) },
+        // Instructions in the system turn, the video in a user turn. See the
+        // note on `buildContextTurn`: a transcript in the system message is
+        // what sent a free model into a padding-token loop.
+        { role: "system", content: system },
+        { role: "user", content: buildContextTurn(request.context) },
         ...request.messages,
       ];
 
@@ -119,6 +124,9 @@ export function handleAiPort(port: chrome.runtime.Port): void {
          * Only retried before any token has arrived: once text is on screen,
          * starting again would replace what they are already reading.
          */
+        const guard = new RunawayGuard();
+        let runaway: string | null = null;
+
         for (let attempt = 0; ; attempt += 1) {
           try {
             const result = await streamChat(
@@ -129,11 +137,30 @@ export function handleAiPort(port: chrome.runtime.Port): void {
                 messages,
               },
               (text) => {
-                sawDelta = true;
-                post({ type: "chat.delta", requestId, text });
+                const verdict = guard.push(text);
+                if (verdict.text) {
+                  sawDelta = true;
+                  post({ type: "chat.delta", requestId, text: verdict.text });
+                }
+                if (verdict.stop) {
+                  runaway = verdict.reason;
+                  // Aborting the fetch is what actually stops the stream; the
+                  // provider keeps sending until the connection closes.
+                  controller.abort();
+                }
               },
               controller.signal,
             );
+            if (guard.isEmpty) {
+              post({
+                type: "chat.error",
+                requestId,
+                code: "bad_model",
+                message:
+                  "The model returned nothing usable. Pick a different one in settings.",
+              });
+              return;
+            }
             post({
               type: "chat.done",
               requestId,
@@ -141,6 +168,17 @@ export function handleAiPort(port: chrome.runtime.Port): void {
             });
             return;
           } catch (error) {
+            // An abort we asked for is not a failure to report as one.
+            if (runaway) {
+              post({
+                type: "chat.error",
+                requestId,
+                code: "bad_model",
+                message: runaway,
+              });
+              return;
+            }
+
             const recoverable =
               error instanceof ProviderError &&
               error.code === "bad_model" &&

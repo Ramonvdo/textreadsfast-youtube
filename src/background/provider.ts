@@ -29,6 +29,16 @@ export interface ChatRequest {
   messages: ChatTurn[];
 }
 
+/**
+ * A ceiling on the reply.
+ *
+ * There was none at first, so a model that degenerated ran to its own context
+ * limit while the reader watched. Generous enough for a thorough summary of a
+ * long video, and the server-side half of the pair — `RunawayGuard` is the
+ * client-side half, and catches repetition long before this does.
+ */
+const MAX_TOKENS = 4096;
+
 export interface ChatResult {
   /** `stop`, `length`, `content_filter`… as the provider reported it. */
   stopReason: string | null;
@@ -304,6 +314,7 @@ export async function streamChat(
         model: request.model,
         messages: request.messages,
         stream: true,
+        max_tokens: MAX_TOKENS,
       }),
     });
   } catch (error) {
