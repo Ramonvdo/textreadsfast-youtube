@@ -42,7 +42,7 @@ describe("mode labels", () => {
    */
   it("names every mode and every theme", () => {
     expect(Object.keys(MODE_LABELS)).toContain("rsvp");
-    expect(Object.keys(MODE_LABELS).length).toBeGreaterThanOrEqual(6);
+    expect(Object.keys(MODE_LABELS).length).toBeGreaterThanOrEqual(7);
     expect(Object.keys(THEME_LABELS)).toContain("custom");
     for (const label of Object.values({ ...MODE_LABELS, ...THEME_LABELS })) {
       expect(label.trim().length).toBeGreaterThan(0);
@@ -62,6 +62,24 @@ describe("mode dispatch", () => {
       (root) => {
         expect(root.querySelector(".trf-pivot")).not.toBeNull();
         expect(words(root)).toHaveLength(0);
+      },
+    ],
+    [
+      "rsvp-bionic",
+      (root) => {
+        // Everything RSVP has: the pivot letter is still picked out and the
+        // word is still the absolutely-positioned `.trf-word`.
+        expect(root.querySelectorAll(".trf-pivot")).toHaveLength(1);
+        expect(words(root)).toHaveLength(0);
+        // ...and the context either side is emboldened, which is the whole
+        // difference between this and plain RSVP.
+        const before = root.querySelector(".trf-context--before");
+        const after = root.querySelector(".trf-context--after");
+        expect(before?.querySelectorAll("b")).toHaveLength(2);
+        expect(after?.querySelectorAll("b")).toHaveLength(3);
+        // Real spaces between them, or the run reads as one long word.
+        expect(before?.textContent).toBe("the brain");
+        expect(after?.textContent).toBe("a whole word");
       },
     ],
     [
@@ -113,6 +131,36 @@ describe("mode dispatch", () => {
       check(root);
     });
   }
+
+  /*
+   * The pivot must not be emboldened along with its neighbours. The focus word
+   * is the one thing that is already at full strength, and bolding it too would
+   * leave the mode with nothing to distinguish the word being spoken from the
+   * words merely near it.
+   */
+  it("leaves the focus word alone in rsvp-bionic", () => {
+    const { root } = mount({ mode: "rsvp-bionic" });
+    expect(root.querySelector(".trf-word")?.querySelector("b")).toBeNull();
+    expect(root.querySelector(".trf-word")?.textContent).toBe("identifies");
+  });
+
+  /*
+   * Both modes split a word at the same point. They used to be a loop each, and
+   * a word that changes shape when you switch mode is a bug you only notice by
+   * doing exactly that.
+   */
+  it("splits a word identically in bionic and rsvp-bionic", () => {
+    const line = mount({ mode: "bionic" }).root;
+    const lineLead = line.querySelector(".trf-lw--future b")?.textContent;
+
+    const hybrid = mount({ mode: "rsvp-bionic" }).root;
+    const hybridLead = hybrid.querySelector(
+      ".trf-context--after b",
+    )?.textContent;
+
+    expect(lineLead).toBeTruthy();
+    expect(hybridLead).toBe(lineLead);
+  });
 
   it("marks exactly one current word in every line mode", () => {
     for (const mode of ["bionic", "plain", "highlight", "karaoke"] as const) {

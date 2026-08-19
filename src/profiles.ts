@@ -114,6 +114,41 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
     settings: only(DEFAULTS),
   },
   {
+    id: "peripheral",
+    name: "Peripheral",
+    blurb:
+      "The pivot holds your eye; the words either side are bolded so you can take them in without looking at them.",
+    builtIn: true,
+    settings: {
+      mode: "rsvp-bionic",
+      theme: "focus",
+      // Monospace, because this mode keeps RSVP's pivot column and a mono face
+      // lands it exactly in `ch` units rather than by measurement.
+      font: "geist_mono",
+      fontSize: 25,
+      letterSpacing: 0,
+      autoScale: true,
+      verticalPosition: 9,
+      // Wide enough for the bolded neighbours to actually be there. Trimming
+      // them at the edge would defeat the point of emboldening them.
+      boxWidth: 72,
+      // Asymmetric on purpose: reading *ahead* is what the bold is for, and
+      // what has already been said needs far less room than what has not.
+      contextBefore: 2,
+      contextAfter: 5,
+      // Brighter than plain RSVP wants. Context you cannot read is not preview,
+      // it is decoration — and the lead letters are lifted above this again.
+      contextOpacity: 0.5,
+      bionicAccent: true,
+      backgroundOpacity: 0.82,
+      showPivotGuides: true,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
+    },
+  },
+  {
     id: "serif-flow",
     name: "Serif Flow",
     blurb: "A whole line at once, serif on neutral grey. Reads like a page.",

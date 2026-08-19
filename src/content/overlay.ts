@@ -231,7 +231,10 @@ export class ReaderOverlay {
 
     switch (this.settings.mode) {
       case "rsvp":
-        this.renderRsvp(view);
+        this.renderRsvp(view, false);
+        return;
+      case "rsvp-bionic":
+        this.renderRsvp(view, true);
         return;
       case "focusline":
         this.renderSingle(view);
@@ -255,7 +258,7 @@ export class ReaderOverlay {
          */
         const unhandled: never = this.settings.mode;
         void unhandled;
-        this.renderRsvp(view);
+        this.renderRsvp(view, false);
       }
     }
   }
@@ -285,7 +288,17 @@ export class ReaderOverlay {
     }
   }
 
-  private renderRsvp(view: ReaderView): void {
+  /**
+   * One word at the focal point, optionally with bolded context.
+   *
+   * `bionicContext` is what makes RSVP + Bionic a distinct mode rather than a
+   * theme. Plain RSVP gives up *parafoveal preview* — the information a normal
+   * reader pulls from the next word before fixating it — and that loss is one
+   * of the three real costs of the technique. Emboldening the lead letters of
+   * the words either side puts some of it back: the pivot still owns fixation,
+   * but the shape of what is coming is legible without looking straight at it.
+   */
+  private renderRsvp(view: ReaderView, bionicContext: boolean): void {
     const text = view.current!.text;
     const { before, pivot, after } = splitAtOrp(text);
 
@@ -318,8 +331,13 @@ export class ReaderOverlay {
     this.stage.style.setProperty("--trf-word-left", `${extent.left}${unit}`);
     this.stage.style.setProperty("--trf-word-right", `${extent.right}${unit}`);
 
-    this.beforeEl.textContent = view.previous.map((w) => w.text).join(" ");
-    this.afterEl.textContent = view.upcoming.map((w) => w.text).join(" ");
+    if (bionicContext) {
+      this.beforeEl.replaceChildren(...bionicRun(view.previous));
+      this.afterEl.replaceChildren(...bionicRun(view.upcoming));
+    } else {
+      this.beforeEl.textContent = view.previous.map((w) => w.text).join(" ");
+      this.afterEl.textContent = view.upcoming.map((w) => w.text).join(" ");
+    }
   }
 
   /**
@@ -349,18 +367,8 @@ export class ReaderOverlay {
               : "future";
         span.className = `trf-lw trf-lw--${position}`;
 
-        if (bionic) {
-          const chars = [...word.text];
-          const lead = Math.max(1, Math.round(chars.length * BIONIC_LEAD));
-          const bold = document.createElement("b");
-          bold.textContent = chars.slice(0, lead).join("");
-          span.append(
-            bold,
-            document.createTextNode(chars.slice(lead).join("")),
-          );
-        } else {
-          span.textContent = word.text;
-        }
+        if (bionic) fillBionic(span, word.text);
+        else span.textContent = word.text;
         return span;
       }),
     );
@@ -378,6 +386,42 @@ export class ReaderOverlay {
     this.afterEl.textContent = "";
     this.wordEl.replaceChildren(document.createTextNode(view.current!.text));
   }
+}
+
+/**
+ * Append a word to `target` with its leading letters in a `<b>`.
+ *
+ * Shared by Bionic and by RSVP + Bionic's context, which is the whole reason it
+ * is a function: these were one loop each, and the fraction that counts as
+ * "leading" has to be identical in both or the same word reads differently
+ * depending on which mode you happen to be in.
+ */
+function fillBionic(target: HTMLElement, text: string): void {
+  const chars = [...text];
+  const lead = Math.max(1, Math.round(chars.length * BIONIC_LEAD));
+  const bold = document.createElement("b");
+  bold.textContent = chars.slice(0, lead).join("");
+  target.append(bold, document.createTextNode(chars.slice(lead).join("")));
+}
+
+/**
+ * A run of context words, each emboldened, separated by real spaces.
+ *
+ * Spaces as text nodes rather than a flex `gap`: these land inside
+ * `.trf-context`, which is absolutely positioned against the focus word's own
+ * edges and aligned to whichever side it sits on. Making it a flex container
+ * would take that alignment away, and the context would stop tracking the word
+ * it belongs to.
+ */
+function bionicRun(words: Word[]): Node[] {
+  const out: Node[] = [];
+  words.forEach((word, index) => {
+    if (index > 0) out.push(document.createTextNode(" "));
+    const span = document.createElement("span");
+    fillBionic(span, word.text);
+    out.push(span);
+  });
+  return out;
 }
 
 function pivotSpan(char: string): HTMLSpanElement {

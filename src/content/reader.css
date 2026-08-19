@@ -18,6 +18,32 @@
   --accent: #e4572e;
   --edge: rgba(255, 255, 255, 0.08);
 
+  /*
+   * Two derived inks, for the three levels of presence Bionic needs: the word
+   * being spoken at full strength, the emboldened lead letters of its
+   * neighbours a little below that, and the rest of those neighbours below
+   * again.
+   *
+   * This CANNOT be done with `opacity`, which composites: a `<b>` inside an
+   * element already at 0.34 can only ever be dimmer than 0.34, never brighter,
+   * so the lead letters could not be lifted above their own surroundings.
+   * Alpha on `color` has no such ceiling.
+   *
+   * The lead is the dimness slider scaled up and then capped well short of
+   * opaque. The cap is the point: full strength is what marks the word being
+   * spoken, and nothing else may claim it, however high the slider goes.
+   */
+  --trf-ink-context: color-mix(
+    in srgb,
+    var(--text) calc(var(--trf-context-opacity, 0.34) * 100%),
+    transparent
+  );
+  --trf-ink-lead: color-mix(
+    in srgb,
+    var(--text) clamp(0%, calc(var(--trf-context-opacity, 0.34) * 190%), 82%),
+    transparent
+  );
+
   position: absolute;
   left: 50%;
   bottom: var(--trf-bottom, 8%);
@@ -247,12 +273,30 @@
 
 /* ── bionic ── */
 
+/* Fully opaque, and dimmed by ink instead. The elements have to stay opaque for
+   the lead letters to be able to sit above their own word — see the note on
+   `--trf-ink-lead`. */
+.trf-reader[data-mode="bionic"] .trf-lw {
+  opacity: 1;
+  color: var(--trf-ink-context);
+}
+
+/* Bolder *and* brighter. Weight alone was too weak a signal at low dimness
+   settings: the bold was there, and you could not see it. */
 .trf-reader[data-mode="bionic"] .trf-lw b {
   font-weight: 700;
+  color: var(--trf-ink-lead);
+}
+
+/* The word being spoken owns full strength, both halves of it. */
+.trf-reader[data-mode="bionic"] .trf-lw--current,
+.trf-reader[data-mode="bionic"] .trf-lw--current b {
+  color: var(--text);
 }
 
 /* The one rule that makes Bionic loud, and therefore the one that can be turned
-   off. Without it the emphasis is carried by weight alone. */
+   off. Without it the emphasis is carried by weight and brightness alone.
+   Last, and one attribute more specific, so it wins the current word's bold. */
 .trf-reader[data-mode="bionic"][data-bionic-accent="true"] .trf-lw--current b {
   color: var(--accent);
 }
@@ -315,6 +359,27 @@
 .trf-reader[data-mode="karaoke"] .trf-lw--future {
   color: var(--faded);
   opacity: var(--trf-context-opacity, 0.34);
+}
+
+/* ── rsvp + bionic ── */
+
+/* RSVP keeps everything it has — the pivot letter, the focal marks, the word
+   pinned to the column — and the context words either side gain Bionic's
+   emphasis.
+ *
+ * The argument: plain RSVP gives up parafoveal preview, the information a
+ * normal reader takes from the next word before fixating it, and that is one of
+ * the technique's three genuine costs. Emboldening the neighbours puts some of
+ * it back without moving fixation, because a bolded word-opening is legible
+ * further into the periphery than a plain one. */
+.trf-reader[data-mode="rsvp-bionic"] .trf-context {
+  opacity: 1;
+  color: var(--trf-ink-context);
+}
+
+.trf-reader[data-mode="rsvp-bionic"] .trf-context b {
+  font-weight: 700;
+  color: var(--trf-ink-lead);
 }
 
 /* ── focus line ── */

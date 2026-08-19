@@ -20,6 +20,7 @@ Run: python scripts/shoot.py
 
 import functools
 import http.server
+import re
 import os
 import socketserver
 import sys
@@ -37,9 +38,9 @@ OUT_DIR = os.path.join(ROOT, "dev-shots")
 OUT = os.path.join(OUT_DIR, "readmode.png")
 MODES_OUT = os.path.join(OUT_DIR, "reading-modes.png")
 
-# The modes harness is a 2x4 grid of stand-in players: tall rather than wide.
+# The modes harness is a 2x5 grid of stand-in players: tall rather than wide.
 MODES_WIDTH = 1400
-MODES_HEIGHT = 1580
+MODES_HEIGHT = 1980
 
 # Sub-pixel differences are rounding in the layout engine, not a jump. Anything
 # a person could see is far larger: one side of Highlighter's padding is ~4px.
@@ -76,6 +77,43 @@ MEASURE = """() => {
     notes: box('.trf-rm-notelist'),
   };
 }"""
+
+
+# Bionic's three levels of presence, read back as computed colour.
+#
+# The tiering is done with alpha on `color` rather than `opacity`, because
+# `opacity` composites: a `<b>` inside an element at 0.34 can only ever be
+# dimmer than 0.34. Nothing in a unit test can see whether that worked -- jsdom
+# does not compute `color-mix` -- so it is checked here, in a real browser.
+INKS = """() => {
+  const pick = (mode, sel) => {
+    const reader = document.querySelector(`.trf-reader[data-mode="${mode}"]`);
+    const node = reader && reader.querySelector(sel);
+    return node ? getComputedStyle(node).color : null;
+  };
+  return {
+    focus:   pick('rsvp-bionic', '.trf-word'),
+    lead:    pick('rsvp-bionic', '.trf-context--after b'),
+    context: pick('rsvp-bionic', '.trf-context--after'),
+  };
+}"""
+
+
+def alpha(css):
+    """Alpha of a computed colour.
+
+    Chromium serialises a `color-mix()` result as `color(srgb R G B / A)`, never
+    as `rgba()`, so matching only on rgba() reads every mixed colour as opaque
+    and the check silently passes.
+    """
+    if css is None:
+        return None
+    found = re.search(r"/\s*([0-9.]+)\s*\)", css)
+    if found:
+        return float(found.group(1))
+    if css.startswith("rgba"):
+        return float(css.rsplit(",", 1)[1].strip(" )"))
+    return 1.0
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -162,6 +200,7 @@ def main() -> None:
                 raise SystemExit(f"modes harness never became ready: {error}")
             modes_page.screenshot(path=MODES_OUT, full_page=True)
             jump = modes_page.evaluate("() => window.__jump")
+            inks = modes_page.evaluate(INKS)
 
             browser.close()
     finally:
@@ -180,6 +219,29 @@ def main() -> None:
         f"highlighter: {len(jump)} words measured, worst width change "
         f"{worst:.2f}px  {'FAIL' if moved else 'pass'}"
     )
+    # ---- bionic's three levels of presence ---------------------------------
+    tiers = {name: alpha(css) for name, css in inks.items()}
+    if any(v is None for v in tiers.values()):
+        sys.exit("could not read the rsvp-bionic inks; the harness changed shape")
+
+    print(
+        "rsvp-bionic ink: context %.3f -> lead %.3f -> focus %.3f  %s"
+        % (
+            tiers["context"],
+            tiers["lead"],
+            tiers["focus"],
+            "pass"
+            if tiers["context"] < tiers["lead"] < tiers["focus"] == 1.0
+            else "FAIL",
+        )
+    )
+    if not (tiers["context"] < tiers["lead"] < tiers["focus"] == 1.0):
+        sys.exit(
+            "Bionic's lead letters must sit above the words around them and "
+            "below the word being spoken. Full strength marks the current "
+            "word and nothing else may claim it."
+        )
+
     print()
     if moved:
         for word in moved:

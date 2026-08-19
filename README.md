@@ -102,7 +102,9 @@ scrutiny, and it is worth being clear about why. Three real losses:
 - **No parafoveal preview.** While fixating one word you are already extracting
   information from the next, which saves real time per word. Showing one word
   alone throws that benefit away — which is part of why RSVP is not simply
-  free speed.
+  free speed. This is the loss the **RSVP + Bionic** mode exists to soften: a
+  bolded word-opening stays legible further into the periphery than a plain
+  one, so the neighbours can be taken in without moving fixation off the pivot.
 - **No wrap-up time.** Readers slow down at clause and sentence boundaries to
   integrate what they have just read. A constant-rate stream gives no room for
   it, so complex or unfamiliar material suffers most.
@@ -153,20 +155,21 @@ instead.
 ## Reading modes
 
 RSVP is the point of the thing, but it is not for everyone or for every video.
-Six modes, all reading the same word stream:
+Seven modes, all reading the same word stream:
 
 <p align="center">
   <img src=".github/assets/reading-modes.png" width="820" alt="The six reading modes, plus two custom palettes" />
 </p>
 
-| Mode            | What it does                                                                                   |
-| --------------- | ---------------------------------------------------------------------------------------------- |
-| **RSVP**        | One word, pinned at the focal point, with the pivot letter picked out. The original.           |
-| **Bionic**      | A line at once, leading letters emboldened. The accent on them can be turned off.              |
-| **Plain**       | An ordinary caption line, dimmed either side of the word being spoken. The quietest option.    |
-| **Highlighter** | A block behind the current word, the way captions look on Shorts. Holds up at speed.           |
-| **Karaoke**     | The line fills in as it is spoken. Nothing is emphasised; the moving edge is the whole signal. |
-| **Focus line**  | RSVP's rhythm without its coloured letter — one word, plainly centred.                         |
+| Mode              | What it does                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.           |
+| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead.       |
+| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.              |
+| **Plain**         | An ordinary caption line, dimmed either side of the word being spoken. The quietest option.    |
+| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.           |
+| **Karaoke**       | The line fills in as it is spoken. Nothing is emphasised; the moving edge is the whole signal. |
+| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                         |
 
 Eight palettes, including a **Custom** one with four colour pickers, plus a
 slider for how much of the video shows through the card behind the words.
@@ -179,6 +182,7 @@ want to: the right settings depend on what is on screen.
 | Profile           | What it is for                                                  |
 | ----------------- | --------------------------------------------------------------- |
 | **Default**       | One word at a fixed point, dark, a little context either side.  |
+| **Peripheral**    | Pinned word, bolded context. Focus and preview at once.         |
 | **Serif Flow**    | A whole line at once, serif on neutral grey. Reads like a page. |
 | **Reading Room**  | Light and warm, for daytime and bright video.                   |
 | **Night Study**   | Bionic on deep blue-grey, for a lecture in the dark.            |
