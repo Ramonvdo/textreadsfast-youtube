@@ -15,11 +15,7 @@
 import { ReaderOverlay } from "../content/overlay";
 import { ProfileBar } from "./profileBar";
 import { mountAiSettings } from "./aiSettings";
-import {
-  loadDevicePrefs,
-  saveDevicePrefs,
-  type DevicePrefs,
-} from "../settings";
+import { loadDevicePrefs, saveDevicePrefs } from "../settings";
 import { classify } from "../reader-core/words";
 import { FONT_LABELS, type ReaderFont } from "../reader-core/fonts";
 import {
@@ -404,8 +400,36 @@ async function mountDevicePrefs(): Promise<void> {
 
   const prefs = await loadDevicePrefs();
 
+  const text = (
+    key: "exportFolder",
+    label: string,
+    help: string,
+    placeholder: string,
+  ): HTMLElement => {
+    const wrapper = el("div", "row");
+    const copy = el("div");
+    const name = el("label", undefined, label);
+    copy.append(name, el("p", undefined, help));
+
+    const control = el("div", "control");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = prefs[key];
+    input.id = `d-${key}`;
+    name.htmlFor = input.id;
+    input.addEventListener("change", () => {
+      void saveDevicePrefs({ [key]: input.value.trim() });
+    });
+    control.append(input);
+
+    wrapper.append(copy, control);
+    return wrapper;
+  };
+
   const toggle = (
-    key: keyof DevicePrefs,
+    key:
+      "statsTracking" | "autoReadMode" | "exportTranscript" | "exportAskWhere",
     label: string,
     help: string,
   ): HTMLElement => {
@@ -440,6 +464,17 @@ async function mountDevicePrefs(): Promise<void> {
       "exportTranscript",
       "Include the transcript in exports",
       "Append the whole spoken transcript to the end of an exported file. Off by default: it is the largest thing in the file and buries the notes.",
+    ),
+    text(
+      "exportFolder",
+      "Export folder",
+      "A folder inside Downloads, for example Obsidian/Inbox. Chrome does not let an extension write anywhere else on its own — to reach a vault outside Downloads, switch on Ask where to save.",
+      "Obsidian/Inbox",
+    ),
+    toggle(
+      "exportAskWhere",
+      "Ask where to save",
+      "Open the save dialog on every export, so a file can go to any folder on this computer. Chrome remembers the last one you picked.",
     ),
     toggle(
       "statsTracking",

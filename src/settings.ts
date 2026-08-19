@@ -113,6 +113,16 @@ export interface DevicePrefs {
   autoReadMode: boolean;
   /** Append the whole transcript to an exported file. */
   exportTranscript: boolean;
+  /**
+   * Where exports land, as a folder path *relative to Downloads*.
+   *
+   * Chrome will not let an extension write to an arbitrary absolute path — a
+   * `filename` that escapes the downloads directory is rejected outright. A
+   * subfolder is what can be automated; anywhere else needs the save dialog.
+   */
+  exportFolder: string;
+  /** Open the save dialog every time, so any folder on disk can be chosen. */
+  exportAskWhere: boolean;
 }
 
 export const DEVICE_DEFAULTS: DevicePrefs = {
@@ -121,12 +131,16 @@ export const DEVICE_DEFAULTS: DevicePrefs = {
   // Off: a transcript is by far the largest thing in the file and would bury
   // the notes people mostly open it to reread.
   exportTranscript: false,
+  exportFolder: "",
+  exportAskWhere: false,
 };
 
 const DEVICE_KEYS = {
   statsTracking: "prefs.statsTracking",
   autoReadMode: "prefs.autoReadMode",
   exportTranscript: "prefs.exportTranscript",
+  exportFolder: "prefs.exportFolder",
+  exportAskWhere: "prefs.exportAskWhere",
 } as const;
 
 export async function loadDevicePrefs(): Promise<DevicePrefs> {
@@ -135,11 +149,15 @@ export async function loadDevicePrefs(): Promise<DevicePrefs> {
       [DEVICE_KEYS.statsTracking]: DEVICE_DEFAULTS.statsTracking,
       [DEVICE_KEYS.autoReadMode]: DEVICE_DEFAULTS.autoReadMode,
       [DEVICE_KEYS.exportTranscript]: DEVICE_DEFAULTS.exportTranscript,
+      [DEVICE_KEYS.exportFolder]: DEVICE_DEFAULTS.exportFolder,
+      [DEVICE_KEYS.exportAskWhere]: DEVICE_DEFAULTS.exportAskWhere,
     });
     return {
       statsTracking: Boolean(stored[DEVICE_KEYS.statsTracking]),
       autoReadMode: Boolean(stored[DEVICE_KEYS.autoReadMode]),
       exportTranscript: Boolean(stored[DEVICE_KEYS.exportTranscript]),
+      exportFolder: String(stored[DEVICE_KEYS.exportFolder] ?? ""),
+      exportAskWhere: Boolean(stored[DEVICE_KEYS.exportAskWhere]),
     };
   } catch {
     return { ...DEVICE_DEFAULTS };
@@ -149,12 +167,34 @@ export async function loadDevicePrefs(): Promise<DevicePrefs> {
 export async function saveDevicePrefs(
   patch: Partial<DevicePrefs>,
 ): Promise<void> {
-  const write: Record<string, boolean> = {};
+  const write: Record<string, boolean | string> = {};
   for (const [name, value] of Object.entries(patch)) {
     const key = DEVICE_KEYS[name as keyof DevicePrefs];
-    if (key !== undefined && typeof value === "boolean") write[key] = value;
+    if (key === undefined) continue;
+    if (typeof value === "boolean" || typeof value === "string") {
+      write[key] = value;
+    }
   }
   if (Object.keys(write).length > 0) await chrome.storage.local.set(write);
+}
+
+/**
+ * A download path Chrome will accept.
+ *
+ * `chrome.downloads` rejects anything that leaves the downloads directory, so
+ * absolute paths, drive letters and `..` are stripped rather than passed
+ * through to fail at the call site with an opaque error.
+ */
+export function downloadPath(folder: string, filename: string): string {
+  const clean = folder
+    .split(/[\\/]+/)
+    .map((part) => part.trim())
+    // A drive letter, a leading slash or a `..` would all make Chrome
+    // reject the whole download rather than clamp it.
+    .filter((part) => part && part !== "." && part !== "..")
+    .filter((part) => !/^[a-zA-Z]:$/.test(part))
+    .join("/");
+  return clean ? `${clean}/${filename}` : filename;
 }
 
 export function onDevicePrefsChanged(

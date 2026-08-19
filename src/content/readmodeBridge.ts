@@ -26,10 +26,24 @@ import type { TimedWord } from "./captions";
 let watchData: unknown = null;
 let playerResponse: unknown = null;
 
+/**
+ * Keep only the data that describes the video actually on screen.
+ *
+ * `ytInitialData` belongs to whichever page was first loaded and is never
+ * refreshed on SPA navigation, so without this check clicking through to a video
+ * handed the reader the previous page's outline — which is why a properly
+ * chaptered video reported having none. The page script now names the video each
+ * payload is about; anything else is dropped rather than allowed to overwrite
+ * the correct data that arrived from `/youtubei/v1/next`.
+ */
 export function rememberWatchData(next: {
   watchData?: unknown;
   playerResponse?: unknown;
+  videoId?: string | null;
 }): void {
+  const current = new URLSearchParams(window.location.search).get("v");
+  if (next.videoId && current && next.videoId !== current) return;
+
   if (next.watchData) watchData = next.watchData;
   if (next.playerResponse) playerResponse = next.playerResponse;
 }
@@ -89,6 +103,8 @@ export async function toggleReadMode(
   subtitles: { on: boolean; onChange: (on: boolean) => void },
   trackStats: boolean,
   exportTranscript: boolean,
+  exportFolder: string,
+  exportAskWhere: boolean,
 ): Promise<ToggleResult> {
   if (isReadModeOpen()) {
     const closed = await closeReadMode();
@@ -152,6 +168,8 @@ export async function toggleReadMode(
       onSubtitlesChange: subtitles.onChange,
       trackStats,
       exportTranscript,
+      exportFolder,
+      exportAskWhere,
     },
     summaryPrompt,
   );

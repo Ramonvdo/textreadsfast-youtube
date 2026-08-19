@@ -20,7 +20,7 @@ import type {
   LibraryStats,
   SessionSummary,
 } from "../shared/libraryProtocol";
-import { loadDevicePrefs } from "../settings";
+import { downloadPath, loadDevicePrefs } from "../settings";
 import {
   formatDuration,
   renderBarChart,
@@ -41,6 +41,8 @@ let sessions: SessionSummary[] = [];
 let granularity: Granularity = "day";
 /** Mirrors the device preference; read once on load. See `settings.ts`. */
 let exportTranscript = false;
+let exportFolder = "";
+let exportAskWhere = false;
 
 /* ── messaging ──────────────────────────────────────────────────────────── */
 
@@ -366,17 +368,17 @@ async function openDetail(videoId: string): Promise<void> {
       transcript: full.transcript?.plainText ?? null,
       includeTranscript: exportTranscript,
     });
-    const blob = new Blob([markdown], {
-      type: "text/markdown;charset=utf-8",
+    // Through the worker, which is the only context that can honour the
+    // chosen folder or open the save dialog.
+    const name = `${(session.title || session.videoId)
+      .replace(/[\/:*?"<>|]+/g, " ")
+      .trim()}.md`;
+    void chrome.runtime.sendMessage({
+      type: "export.save",
+      markdown,
+      filename: downloadPath(exportFolder, name),
+      saveAs: exportAskWhere,
     });
-    const url = URL.createObjectURL(blob);
-    const anchor = el("a");
-    anchor.href = url;
-    anchor.download = `${(session.title || session.videoId).replace(/[\\/:*?"<>|]+/g, " ").trim()}.md`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
   });
 
   const remove = el("button", "danger", "Delete");
@@ -521,7 +523,10 @@ async function main(): Promise<void> {
   }
   if (reply.type !== "list") return;
 
-  exportTranscript = (await loadDevicePrefs()).exportTranscript;
+  const prefs = await loadDevicePrefs();
+  exportTranscript = prefs.exportTranscript;
+  exportFolder = prefs.exportFolder;
+  exportAskWhere = prefs.exportAskWhere;
   sessions = reply.sessions;
   paintGrid();
   void paintOverview();

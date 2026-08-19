@@ -37,6 +37,44 @@ chrome.runtime.onConnect.addListener((port) => {
  * It cannot fetch it itself: the list needs the API key, and the key is only
  * ever read here.
  */
+/**
+ * Save an export.
+ *
+ * Routed through the worker rather than an `<a download>` in the page for two
+ * reasons: `chrome.downloads` is the only API that can put the file in a chosen
+ * folder or open the save dialog, and a blob anchor click from a content script
+ * on youtube.com is at the mercy of that page's policies.
+ *
+ * A `data:` URL rather than `URL.createObjectURL`, which service workers do not
+ * have.
+ */
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if ((message as { type?: string })?.type !== "export.save") return false;
+
+  const { markdown, filename, saveAs } = message as {
+    markdown: string;
+    filename: string;
+    saveAs: boolean;
+  };
+
+  void chrome.downloads
+    .download({
+      url: `data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`,
+      filename,
+      saveAs,
+      conflictAction: "uniquify",
+    })
+    .then(() => sendResponse({ ok: true }))
+    .catch((error: unknown) =>
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+
+  return true;
+});
+
 chrome.runtime.onMessage.addListener((message) => {
   // The inline setup frame is sandboxed inside a content-script overlay and
   // cannot open a tab itself.

@@ -1,0 +1,447 @@
+{
+  "currentVideoEndpoint": {
+    "watchEndpoint": {
+      "videoId": "aKBfAnxChjU"
+    }
+  },
+  "playerOverlays": {
+    "playerOverlayRenderer": {
+      "decoratedPlayerBarRenderer": {
+        "decoratedPlayerBarRenderer": {
+          "playerBar": {
+            "multiMarkersPlayerBarRenderer": {
+              "visibleOnLoad": {
+                "key": "DESCRIPTION_CHAPTERS"
+              },
+              "markersMap": [
+                {
+                  "key": "DESCRIPTION_CHAPTERS",
+                  "value": {
+                    "chapters": [
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "intro"
+                          },
+                          "timeRangeStartMillis": 0,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 0
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_3266.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLD-TY5Zy5chPMzKwSrNbP6y0v0ARQ",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_3266.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLD4xguLFbzW5OVoe3ZftE7VSKXrbA",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "which channel converts best to skool"
+                          },
+                          "timeRangeStartMillis": 47000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 1
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_59933.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLAV0aEFGKvl1y157H6UU5B4E5ll8A",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_59933.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDKOZDExz9NbJ-cgycSG253f9k7ww",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "selling an ai bot to your client's competitors"
+                          },
+                          "timeRangeStartMillis": 103000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 2
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_111200.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLCpneP9flPcIbZTOr0obSUVLQVeXA",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_111200.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDyVAn82hHjinUseYhNj4SHuIc02g",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "what mac should you start with"
+                          },
+                          "timeRangeStartMillis": 351000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 3
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_363900.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLDYGymILHJfZaxJkNl5S68I-xidnA",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_363900.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLCHAlYQwEDSUQor1TqpAMfxviPZNQ",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "stop selling speed to lead, sell revenue"
+                          },
+                          "timeRangeStartMillis": 371000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 4
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_389833.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLBFflprjfmENsXE_nq40WwNWId3-g",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_389833.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDcoNs8KwDMnI_2kWLPf43gYlg1FQ",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "getting leads as a roofing sales rep"
+                          },
+                          "timeRangeStartMillis": 468000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 5
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_473833.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLB4WRsOu67IMbDgcW4R3BNgdj3Zrg",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_473833.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBc95oXwd5Jf1ATJP4SOBs10aLopQ",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "10k in 48 hours with no audience"
+                          },
+                          "timeRangeStartMillis": 614000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 6
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_616066.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLBkE4gM8j0BxtoD9iDYuzTgR1R5Xg",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_616066.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLA6lkW9VfKEZxlD20htw0e4vUAfeg",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "how to find an instagram editor"
+                          },
+                          "timeRangeStartMillis": 748000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 7
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_748833.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLBMmEF21e-HfVmrrgOli5cvY6nGIQ",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_748833.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLD9hgVGQ23E5OJt5GK5keHjwxiXEg",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "managed service vs saas"
+                          },
+                          "timeRangeStartMillis": 840000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 8
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_853066.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLA2QrpuMX9ksjQIQtSs4Fd6LD-4sA",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_853066.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLDuzyB6Ihz3x-KHL0fY_ruxQ-jmYw",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "clipping every q&a into content"
+                          },
+                          "timeRangeStartMillis": 957000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 9
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_973033.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLARRn8ngG0YxETVD-OQWPtF68YXsg",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_973033.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBA1ufMmbg8GDLGliNDHdYvqvlNEg",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "2,402 maker school members"
+                          },
+                          "timeRangeStartMillis": 1093000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 10
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_1096200.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLASJ6qSTPX9__R7ajEVHX7zGnRR7Q",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_1096200.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBBXKmAeKcV3tEFEnJv9urYeUoMRg",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "getting recognized in airports"
+                          },
+                          "timeRangeStartMillis": 1197000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 11
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_1220400.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLC-eQrxfD2PN2ckTCfN-kbmv-WXOg",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_1220400.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLC90sBqyxnOafy2MHuQZ66f3PHzSA",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "chapterRenderer": {
+                          "title": {
+                            "simpleText": "outro"
+                          },
+                          "timeRangeStartMillis": 1257000,
+                          "onActiveCommand": {
+                            "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                            "setActivePanelItemAction": {
+                              "panelTargetId": "engagement-panel-macro-markers-description-chapters",
+                              "itemIndex": 12
+                            }
+                          },
+                          "thumbnail": {
+                            "thumbnails": [
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_1259666.jpg?sqp=-oaymwEbCKgBEF5IVfKriqkDDggBFQAAiEIYAXABwAEG&rs=AOn4CLAEdIBei1y0QlVSvB1G0eXI-F6pcA",
+                                "width": 168,
+                                "height": 94
+                              },
+                              {
+                                "url": "https://i.ytimg.com/vi/aKBfAnxChjU/hqdefault_1259666.jpg?sqp=-oaymwEcCNACELwBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLBdIWw60TOYpOnCRArUJyVzYH2vxA",
+                                "width": 336,
+                                "height": 188
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ],
+                    "trackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGQ==",
+                    "onChapterRepeat": {
+                      "clickTrackingParams": "CIcBEMaHBiITCP_ElOewrJYDFQ8tdQEdFpcEGcoBBEbSYKc=",
+                      "openPopupAction": {
+                        "popup": {
+                          "notificationActionRenderer": {
+                            "responseText": {
+                              "runs": [
+                                {
+                                  "text": "Chapter repeat is on"
+                                }
+                              ]
+                            },
+                            "actionButton": {
+                              "buttonRenderer": {
+                                "style": "STYLE_BLUE_TEXT",
+                                "text": {
+                                  "runs": [
+                                    {
+                                      "text": "Turn off"
+                                    }
+                                  ]
+                                },
+                                "trackingParams": "CIkBEPBbIhMI_8SU57CslgMVDy11AR0WlwQZ",
+                                "command": {
+                                  "clickTrackingParams": "CIkBEPBbIhMI_8SU57CslgMVDy11AR0WlwQZygEERtJgpw==",
+                                  "repeatChapterCommand": {
+                                    "repeat": "REPEAT_CHAPTER_TYPE_DISABLE_REPEAT"
+                                  }
+                                }
+                              }
+                            },
+                            "trackingParams": "CIgBELlqIhMI_8SU57CslgMVDy11AR0WlwQZ"
+                          }
+                        },
+                        "popupType": "TOAST"
+                      }
+                    }
+                  }
+                }
+              ],
+              "trackingParams": "CIYBEKHACyITCP_ElOewrJYDFQ8tdQEdFpcEGQ=="
+            }
+          }
+        }
+      }
+    }
+  }
+}

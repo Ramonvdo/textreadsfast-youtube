@@ -102,6 +102,21 @@ function publishTracks(): void {
  */
 let lastWatchData: unknown = null;
 
+/** The video a payload is about, so a stale one can be recognised as stale. */
+function watchDataVideoId(data: unknown): string | null {
+  const record = data as
+    | { currentVideoEndpoint?: { watchEndpoint?: { videoId?: unknown } } }
+    | null
+    | undefined;
+  const id = record?.currentVideoEndpoint?.watchEndpoint?.videoId;
+  return typeof id === "string" && id ? id : null;
+}
+
+/** The video in the address bar right now. */
+function currentVideoId(): string | null {
+  return new URLSearchParams(window.location.search).get("v");
+}
+
 /**
  * Chapters live in `ytInitialData`, never in `ytInitialPlayerResponse` —
  * verified against four live videos. Both are page-context globals, which is why
@@ -117,9 +132,26 @@ function publishWatchData(): void {
   const player = (window as { ytInitialPlayerResponse?: unknown })
     .ytInitialPlayerResponse;
   if (!data && !player) return;
+
+  /*
+   * THE BUG THIS GUARD EXISTS FOR: `ytInitialData` belongs to the page that was
+   * first loaded and is never refreshed on SPA navigation. Publishing it blind
+   * meant that reaching a video by clicking a link handed the reader the
+   * previous page's outline — so a properly chaptered video reported having no
+   * chapters. Worse, it would arrive *after* the correct `/youtubei/v1/next`
+   * payload and overwrite it.
+   */
+  const id = watchDataVideoId(data);
+  const current = currentVideoId();
+  if (id && current && id !== current) return;
+
   if (data === lastWatchData) return;
   lastWatchData = data;
-  post("watchdata", { watchData: data, playerResponse: player });
+  post("watchdata", {
+    watchData: data,
+    playerResponse: player,
+    videoId: id ?? current,
+  });
 }
 
 /* ── network hook ───────────────────────────────────────────────────────── */
@@ -158,7 +190,10 @@ function hookNetwork(): void {
           .json()
           .then((watchData: unknown) => {
             lastWatchData = watchData;
-            post("watchdata", { watchData });
+            post("watchdata", {
+              watchData,
+              videoId: watchDataVideoId(watchData) ?? currentVideoId(),
+            });
           })
           .catch(() => undefined);
       }
@@ -196,7 +231,10 @@ function hookNetwork(): void {
         try {
           const watchData: unknown = JSON.parse(this.responseText);
           lastWatchData = watchData;
-          post("watchdata", { watchData });
+          post("watchdata", {
+            watchData,
+            videoId: watchDataVideoId(watchData) ?? currentVideoId(),
+          });
         } catch {
           // A shape we cannot parse simply means no chapters from this route.
         }

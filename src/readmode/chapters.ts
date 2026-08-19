@@ -682,6 +682,26 @@ export function videoMetaFrom(playerResponse: unknown): VideoMeta | null {
   };
 }
 
+/**
+ * Which video a watch payload describes.
+ *
+ * Load-bearing, and the fix for a real bug: `window.ytInitialData` is the data
+ * of the page that was *first loaded*, and YouTube never refreshes it on SPA
+ * navigation. Publishing it blind meant that arriving at a video by clicking a
+ * link handed the reader the previous page's outline — usually none at all,
+ * which is why a properly chaptered video reported "no chapters of its own".
+ *
+ * Every payload now names its own video, the same discipline `captionVideoId`
+ * already applies to caption tracks.
+ */
+export function watchDataVideoId(data: unknown): string | null {
+  const direct = at(data, "currentVideoEndpoint", "watchEndpoint", "videoId");
+  if (typeof direct === "string" && direct) return direct;
+
+  const details = at(data, "videoDetails", "videoId");
+  return typeof details === "string" && details ? details : null;
+}
+
 /* ── AI-generated sections ──────────────────────────────────────────────── */
 
 /**

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
+  watchDataVideoId,
   parseAiChapters,
   transcriptForChapters,
   sectionLabel,
@@ -623,5 +625,42 @@ describe("transcriptForChapters", () => {
 
   it("survives an empty transcript", () => {
     expect(transcriptForChapters([])).toBe("");
+  });
+});
+
+describe("a real YouTube payload", () => {
+  /*
+   * Captured from https://www.youtube.com/watch?v=aKBfAnxChjU, a video that
+   * reported "no chapters of its own" in the navigation while plainly having
+   * thirteen. This fixture proved the extractor was never the problem: the
+   * content script was being handed the *previous* page's `ytInitialData`,
+   * which YouTube never refreshes on SPA navigation.
+   */
+  const data = JSON.parse(
+    readFileSync("src/dev/fixtures/watchdata-chapters.json", "utf8"),
+  ) as unknown;
+
+  it("finds every authored chapter", () => {
+    const result = chaptersFrom(data);
+    expect(result?.source).toBe("description");
+    expect(result?.chapters).toHaveLength(13);
+    expect(result?.chapters[0]).toEqual({ title: "intro", startMs: 0 });
+    expect(result?.chapters[1].startMs).toBe(47_000);
+  });
+
+  it("names the video it describes, which is what makes staleness detectable", () => {
+    expect(watchDataVideoId(data)).toBe("aKBfAnxChjU");
+  });
+
+  it("has no id to offer for something that is not watch data", () => {
+    expect(watchDataVideoId({})).toBeNull();
+    expect(watchDataVideoId(null)).toBeNull();
+    expect(watchDataVideoId("nonsense")).toBeNull();
+  });
+
+  it("falls back to the player response's own id", () => {
+    expect(watchDataVideoId({ videoDetails: { videoId: "abc123" } })).toBe(
+      "abc123",
+    );
   });
 });

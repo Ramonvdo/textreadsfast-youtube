@@ -110,7 +110,11 @@ window.addEventListener("message", (event: MessageEvent) => {
     // way captions are: this payload identifies its own video internally, and
     // the extractors ignore anything whose shape they do not recognise.
     rememberWatchData(
-      data.payload as { watchData?: unknown; playerResponse?: unknown },
+      data.payload as {
+        watchData?: unknown;
+        playerResponse?: unknown;
+        videoId?: string | null;
+      },
     );
   } else if (data.kind === "timedtext") {
     const { url, body } = data.payload as { url?: string; body: string };
@@ -492,6 +496,8 @@ async function enterOrLeaveReadMode(): Promise<{
     },
     prefs.statsTracking,
     prefs.exportTranscript,
+    prefs.exportFolder,
+    prefs.exportAskWhere,
   );
 
   // The reader travels with the player into read mode for free, because

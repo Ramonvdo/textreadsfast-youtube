@@ -30,6 +30,7 @@ import * as library from "./library";
 import { streamChat } from "./ai";
 import { CHAPTER_PROMPT, parseAiChapters } from "./chapters";
 import { COVERAGE_BUCKET_MS, thumbnailUrl } from "../shared/libraryProtocol";
+import { downloadPath } from "../settings";
 import { isAdShowing } from "../content/ads";
 import type { ChatContext } from "../shared/aiProtocol";
 
@@ -52,6 +53,10 @@ export interface ReadModeContext {
   trackStats: boolean;
   /** Append the whole transcript when exporting. */
   exportTranscript: boolean;
+  /** Folder inside Downloads to save exports into. */
+  exportFolder: string;
+  /** Open the save dialog instead of saving straight away. */
+  exportAskWhere: boolean;
   /** The transcript shaped for the chapter prompt, when one is needed. */
   chapterSeed?: string;
   /** Apply and persist a change to that. Owned by the content script, which is
@@ -182,6 +187,8 @@ function trackPlayhead(video: HTMLVideoElement): () => void {
 interface ExportOptions {
   transcript: string | null;
   includeTranscript: boolean;
+  folder: string;
+  askWhere: boolean;
 }
 
 /* ── study stats ────────────────────────────────────────────────────────── */
@@ -481,6 +488,8 @@ export async function openReadMode(
       exportNotes(session.model, {
         transcript: session.transcript,
         includeTranscript: ctx.exportTranscript,
+        folder: ctx.exportFolder,
+        askWhere: ctx.exportAskWhere,
       });
     },
     onToggleSubtitles: (on) => {
@@ -619,19 +628,25 @@ async function saveSession(): Promise<void> {
   });
 }
 
+/**
+ * Hand the file to the service worker.
+ *
+ * Not an `<a download>` here: only `chrome.downloads` can put the file in a
+ * chosen folder or open the save dialog, and a blob anchor click from a
+ * content script is at the mercy of youtube.com's own policies.
+ */
 function exportNotes(model: ReadModeModel, options: ExportOptions): void {
-  const blob = new Blob([notesToMarkdown(model, options)], {
-    type: "text/markdown;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = exportFilename(model);
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  // Revoked on the next task so the download has definitely started.
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  void chrome.runtime
+    .sendMessage({
+      type: "export.save",
+      markdown: notesToMarkdown(model, options),
+      filename: downloadPath(options.folder, exportFilename(model)),
+      saveAs: options.askWhere,
+    })
+    .catch(() => {
+      // The worker was asleep or the extension reloaded. Nothing to do here
+      // except not throw into the reading session over a failed save.
+    });
 }
 
 export async function closeReadMode(): Promise<boolean> {
