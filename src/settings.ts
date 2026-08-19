@@ -25,13 +25,7 @@ export type ReaderTheme =
  * `settings.mode` was meant, and the compiler would accept it.
  */
 export type ReadingMode =
-  | "rsvp"
-  | "rsvp-bionic"
-  | "bionic"
-  | "plain"
-  | "highlight"
-  | "karaoke"
-  | "focusline";
+  "rsvp" | "rsvp-bionic" | "bionic" | "plain" | "highlight" | "focusline";
 
 /**
  * What each mode is called on the settings page.
@@ -44,9 +38,8 @@ export const MODE_LABELS: Record<ReadingMode, string> = {
   rsvp: "RSVP — one word at a fixed point",
   "rsvp-bionic": "RSVP + Bionic — pinned word, bolded context",
   bionic: "Bionic — bold leading letters",
-  plain: "Plain — a quiet caption line",
+  plain: "Static — a caption line that holds still",
   highlight: "Highlighter — a block on the current word",
-  karaoke: "Karaoke — the line fills as it is spoken",
   focusline: "Focus line — one word, plainly centred",
 };
 

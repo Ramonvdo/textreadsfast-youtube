@@ -43,6 +43,16 @@ export interface ReaderView {
   current: Word | null;
   previous: Word[];
   upcoming: Word[];
+  /**
+   * What "already on screen" means, when the current word is not enough.
+   *
+   * Static mode holds a whole line still and swaps at a boundary, so the thing
+   * that must not be redrawn every frame is the *line*, not the word. Keying on
+   * the word's text would also break outright whenever two consecutive lines
+   * happened to start with the same word — the second would be judged already
+   * drawn, and the caption would stop advancing.
+   */
+  key?: string;
 }
 
 export class ReaderOverlay {
@@ -54,7 +64,7 @@ export class ReaderOverlay {
   private guideTop: HTMLSpanElement;
   private guideBottom: HTMLSpanElement;
   private settings: Settings;
-  private lastText: string | null = null;
+  private lastKey: string | null = null;
   private resize: ResizeObserver | null = null;
   private scale = 1;
 
@@ -131,7 +141,7 @@ export class ReaderOverlay {
     // A pixel offset measured at the old size would put the pivot in the wrong
     // place; `ch` offsets scale with the font and are unaffected.
     clearPivotCache();
-    this.lastText = null;
+    this.lastKey = null;
   }
 
   apply(settings: Settings): void {
@@ -187,7 +197,7 @@ export class ReaderOverlay {
     // on a paused video. This used to be gated on the font alone, which missed
     // both the reading mode and the context counts. Settings changes are rare;
     // one redraw costs nothing, and enumerating the triggers cost correctness.
-    this.lastText = null;
+    this.lastKey = null;
 
     // Sets `--trf-size` from the size setting and the player's current height.
     const player = this.root.parentElement;
@@ -206,11 +216,11 @@ export class ReaderOverlay {
 
   /** Nothing is playing, or no word covers this moment. */
   clear(): void {
-    // Keyed on what is actually on screen, not on `lastText`. `apply` clears
-    // `lastText` to force a redraw, so guarding on it here meant that after any
+    // Keyed on what is actually on screen, not on `lastKey`. `apply` clears
+    // `lastKey` to force a redraw, so guarding on it here meant that after any
     // settings change this became a no-op and the last word stayed put.
     if (this.root.classList.contains("trf-idle")) return;
-    this.lastText = null;
+    this.lastKey = null;
     this.root.classList.add("trf-idle");
     this.wordEl.textContent = "";
     this.beforeEl.textContent = "";
@@ -222,10 +232,11 @@ export class ReaderOverlay {
       this.clear();
       return;
     }
-    // Re-rendering the same word every frame would restart its transition and
-    // make the focal point shimmer.
-    if (view.current.text === this.lastText) return;
-    this.lastText = view.current.text;
+    // Re-rendering the same content every frame would restart its transition
+    // and make the focal point shimmer.
+    const key = view.key ?? view.current.text;
+    if (key === this.lastKey) return;
+    this.lastKey = key;
     this.root.classList.remove("trf-idle");
     this.root.classList.remove("trf-hidden");
 
@@ -242,7 +253,6 @@ export class ReaderOverlay {
       case "bionic":
       case "plain":
       case "highlight":
-      case "karaoke":
         this.renderLine(view, this.settings.mode === "bionic");
         return;
       default: {
@@ -344,7 +354,7 @@ export class ReaderOverlay {
    * One line of words, with the current one marked.
    *
    * Shared by every mode that reads as a sentence — Bionic, Plain, Highlighter
-   * and Karaoke differ only in how the current word is distinguished, and that
+   * differ only in how the current word is distinguished, and that
    * is a stylesheet question. Each word gets its position as a class and the
    * mode decides what to do with it, which is why adding a fifth line mode is a
    * CSS block rather than a fifth copy of this loop.

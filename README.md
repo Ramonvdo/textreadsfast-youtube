@@ -147,29 +147,40 @@ to replicate the claimed speed benefit have largely not found one. It is offered
 as a preference, not as a performance feature, and the accent colour on the bold
 letters can be turned off entirely if you want it quieter still.
 
-The same applies to the other line modes. **Plain**, **Karaoke** and
-**Highlighter** make no speed claim at all. They exist because a fixed focal
-point is demanding, and sometimes you want a calm subtitle you can glance at
-instead.
+The same applies to the other line modes. **Static** and **Highlighter** make no
+speed claim at all. They exist because a fixed focal point is demanding, and
+sometimes you want a calm subtitle you can glance at instead.
+
+**Static** is the deliberate opposite of everything above. Every other mode
+advances one word per word, so something on screen changes roughly three hundred
+times a minute. Static shows a whole line, holds it still, and swaps once at a
+sentence or clause boundary — around twenty times a minute. It makes no claim to
+speed at all; it is there for when you want to be able to look away.
+
+Because YouTube's own cue boundaries do not survive parsing — the transcript is
+flattened into one timeline of words, which is what every sliding mode needs —
+the lines are rebuilt from the punctuation, breaking at sentences, at clauses
+once a line is worth ending, and at a hard cap so an unpunctuated
+auto-transcript cannot run off the card. See
+[`src/content/lines.ts`](src/content/lines.ts).
 
 ## Reading modes
 
 RSVP is the point of the thing, but it is not for everyone or for every video.
-Seven modes, all reading the same word stream:
+Six modes, all reading the same word stream:
 
 <p align="center">
   <img src=".github/assets/reading-modes.png" width="820" alt="The six reading modes, plus two custom palettes" />
 </p>
 
-| Mode              | What it does                                                                                   |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.           |
-| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead.       |
-| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.              |
-| **Plain**         | An ordinary caption line, dimmed either side of the word being spoken. The quietest option.    |
-| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.           |
-| **Karaoke**       | The line fills in as it is spoken. Nothing is emphasised; the moving edge is the whole signal. |
-| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                         |
+| Mode              | What it does                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.                                  |
+| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead.                              |
+| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.                                     |
+| **Static**        | An ordinary subtitle. Holds completely still and swaps a whole line at a time — the only mode in which nothing moves. |
+| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.                                  |
+| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                                                |
 
 Eight palettes, including a **Custom** one with four colour pickers, plus a
 slider for how much of the video shows through the card behind the words.
@@ -190,7 +201,6 @@ want to: the right settings depend on what is on screen.
 | **Clarity**       | Big, high contrast, letter shapes drawn for low vision.         |
 | **Quiet Caption** | An ordinary subtitle line, dimmed either side. Nothing flashes. |
 | **Highlighter**   | A block on the word being spoken. Holds up at speed.            |
-| **Karaoke**       | The line fills in as it is spoken.                              |
 
 Editing any control leaves the change live and marks the profile _modified_ —
 built-ins are never overwritten, so **Default** stays exactly as shipped

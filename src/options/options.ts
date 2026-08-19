@@ -398,6 +398,11 @@ function syncDependentControls(): void {
 
   for (const key of CUSTOM_COLOR_KEYS) dim(key, settings.theme !== "custom");
   dim("bionicAccent", settings.mode !== "bionic");
+  // Static mode builds its own line from the transcript's punctuation, so
+  // neither count is read at all.
+  const staticMode = settings.mode === "plain";
+  dim("contextBefore", staticMode);
+  dim("contextAfter", staticMode);
 }
 
 /** Autoscale sizes the text against the *player*, and the preview is not one —

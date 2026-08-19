@@ -38,9 +38,9 @@ OUT_DIR = os.path.join(ROOT, "dev-shots")
 OUT = os.path.join(OUT_DIR, "readmode.png")
 MODES_OUT = os.path.join(OUT_DIR, "reading-modes.png")
 
-# The modes harness is a 2x5 grid of stand-in players: tall rather than wide.
+# The modes harness is a 2x4 grid of stand-in players: tall rather than wide.
 MODES_WIDTH = 1400
-MODES_HEIGHT = 1980
+MODES_HEIGHT = 1620
 
 # Sub-pixel differences are rounding in the layout engine, not a jump. Anything
 # a person could see is far larger: one side of Highlighter's padding is ~4px.

@@ -42,7 +42,7 @@ describe("mode labels", () => {
    */
   it("names every mode and every theme", () => {
     expect(Object.keys(MODE_LABELS)).toContain("rsvp");
-    expect(Object.keys(MODE_LABELS).length).toBeGreaterThanOrEqual(7);
+    expect(Object.keys(MODE_LABELS).length).toBeGreaterThanOrEqual(6);
     expect(Object.keys(THEME_LABELS)).toContain("custom");
     for (const label of Object.values({ ...MODE_LABELS, ...THEME_LABELS })) {
       expect(label.trim().length).toBeGreaterThan(0);
@@ -107,13 +107,6 @@ describe("mode dispatch", () => {
       },
     ],
     [
-      "karaoke",
-      (root) => {
-        expect(root.querySelectorAll(".trf-lw--past")).toHaveLength(2);
-        expect(root.querySelectorAll(".trf-lw--future")).toHaveLength(3);
-      },
-    ],
-    [
       "focusline",
       (root) => {
         // One word, plainly. No pivot span, no line of spans.
@@ -163,7 +156,7 @@ describe("mode dispatch", () => {
   });
 
   it("marks exactly one current word in every line mode", () => {
-    for (const mode of ["bionic", "plain", "highlight", "karaoke"] as const) {
+    for (const mode of ["bionic", "plain", "highlight"] as const) {
       const { root } = mount({ mode });
       const current = root.querySelectorAll(".trf-lw--current");
       expect(current).toHaveLength(1);

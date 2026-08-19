@@ -286,7 +286,8 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
   {
     id: "quiet-caption",
     name: "Quiet Caption",
-    blurb: "An ordinary subtitle line, dimmed either side. Nothing flashes.",
+    blurb:
+      "An ordinary subtitle that holds still and changes a line at a time. Nothing moves.",
     builtIn: true,
     settings: {
       mode: "plain",
@@ -297,10 +298,11 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       autoScale: true,
       verticalPosition: 8,
       boxWidth: 78,
-      // Wide window and a mild fade: this mode is for reading the sentence,
-      // not for fixating one word in it.
-      contextBefore: 4,
-      contextAfter: 5,
+      // Static mode builds its own line, so neither count is read. Left at
+      // sensible values rather than zero, so switching away from this profile
+      // to a sliding mode does not land on an empty window.
+      contextBefore: 3,
+      contextAfter: 4,
       contextOpacity: 0.48,
       bionicAccent: true,
       // Barely a card at all, so the words read as part of the picture rather
@@ -334,37 +336,6 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       contextOpacity: 0.62,
       bionicAccent: true,
       backgroundOpacity: 0.55,
-      showPivotGuides: false,
-      removeFillers: true,
-      hideNativeCaptions: true,
-      readerInReadMode: true,
-      ...UNUSED_PALETTE,
-    },
-  },
-  {
-    id: "karaoke",
-    name: "Karaoke",
-    blurb:
-      "The line fills in as it is spoken. No emphasis, just a moving edge.",
-    builtIn: true,
-    settings: {
-      mode: "karaoke",
-      theme: "nocturne",
-      font: "source_serif",
-      fontSize: 27,
-      letterSpacing: 0,
-      autoScale: true,
-      verticalPosition: 9,
-      boxWidth: 82,
-      // Symmetric and generous. The boundary between spoken and unspoken is
-      // the only signal, so there has to be enough of both to see it move.
-      contextBefore: 5,
-      contextAfter: 5,
-      // Low, because here the fade *is* the mechanism rather than a way of
-      // keeping neighbours out of the way.
-      contextOpacity: 0.26,
-      bionicAccent: true,
-      backgroundOpacity: 0.74,
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,

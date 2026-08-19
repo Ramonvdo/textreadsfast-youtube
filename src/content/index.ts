@@ -21,6 +21,7 @@ import {
   type TimedWord,
 } from "./captions";
 import { ReaderOverlay } from "./overlay";
+import { buildLines, lineAt, type Line } from "./lines";
 import { adAction, isAdShowing } from "./ads";
 import {
   forgetWatchData,
@@ -254,6 +255,19 @@ function track(
   let stopped = false;
   let handle = 0;
 
+  /*
+   * Built once, and only if a static mode actually asks for one.
+   *
+   * A transcript is tens of thousands of words, and chunking it is wasted work
+   * for the five modes that slide. Cached rather than recomputed per frame for
+   * the same reason.
+   */
+  let cachedLines: Line[] | null = null;
+  // Indices line up with `words` because the map is one-to-one, which is what
+  // lets `lineAt` be queried with the index `wordAt` just returned.
+  const lines = (): Line[] =>
+    (cachedLines ??= buildLines(words.map((w) => w.word)));
+
   const update = (): void => {
     // An ad runs through this same element on its own clock, so the transcript
     // read at that offset would be real words at meaningless moments. Hide the
@@ -274,6 +288,31 @@ function track(
       overlay.clear();
       return;
     }
+
+    /*
+     * Static mode is a line at a time, not a window around the playhead.
+     *
+     * Keyed on the line's own start index so the render guard holds the whole
+     * line still: this runs once a frame, and without a key that changes only
+     * at a boundary the caption would be rebuilt sixty times a second for no
+     * visible reason. `current` is the line's first word purely so the guard
+     * upstream still has a word to work with; nothing marks it on screen.
+     */
+    if (settings.mode === "plain") {
+      const line = lineAt(lines(), index);
+      if (!line) {
+        overlay.clear();
+        return;
+      }
+      overlay.render({
+        key: `line:${line.startIndex}`,
+        current: line.words[0],
+        previous: [],
+        upcoming: line.words.slice(1),
+      });
+      return;
+    }
+
     overlay.render({
       current: words[index].word,
       previous: words

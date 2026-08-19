@@ -2,14 +2,15 @@
  * Every reading mode, side by side, over a stand-in for the video.
  *
  * The reader is the one part of this extension that cannot be judged from its
- * markup: whether Highlighter reads as a highlight and whether Karaoke's fill
- * tracks the speaker are questions about pixels. This renders all six modes in
- * one page so a person can look at them together, and exposes the one thing a
+ * markup: whether Highlighter reads as a highlight and whether the bolded
+ * context is legible are questions about pixels. This renders every mode in one
+ * page so a person can look at them together, and exposes the one thing a
  * person cannot reliably see — whether a word changes width when it becomes the
  * current one, which would make the whole line twitch once per word.
  */
 
 import { ReaderOverlay } from "../content/overlay";
+import { buildLines } from "../content/lines";
 import { classify } from "../reader-core/words";
 import {
   DEFAULTS,
@@ -32,6 +33,9 @@ const WORDS = SENTENCE.split(" ").map(classify);
 
 /** Enough either side that every mode has a full window to draw. */
 const AT = 5;
+
+/** The same words, chunked the way the static mode actually reads them. */
+const LINES = buildLines(WORDS);
 
 function viewAt(index: number) {
   return {
@@ -69,7 +73,21 @@ function panel(caption: string, settings: Partial<Settings>): HTMLElement {
     ...settings,
   });
   overlay.mount(player);
-  overlay.render(viewAt(AT));
+  /*
+   * Static mode is not a window around the playhead, so feeding it one would
+   * screenshot something the reader never actually shows. It gets the line the
+   * real render loop would build for this moment.
+   */
+  overlay.render(
+    settings.mode === "plain"
+      ? {
+          key: "line:0",
+          current: LINES[0].words[0],
+          previous: [],
+          upcoming: LINES[0].words.slice(1),
+        }
+      : viewAt(AT),
+  );
 
   return cell;
 }

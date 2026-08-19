@@ -135,7 +135,7 @@ pnpm run format         # prettier; `src/reader-core` is ignored on purpose
   something else. `THEME_LABELS` and the field chain in `options.ts` are guarded
   the same way.
 
-- **Bionic, Plain, Highlighter and Karaoke share one renderer.** `renderLine`
+- **Bionic, Plain and Highlighter share one renderer.** `renderLine`
   emits `.trf-lw` per word with `--past` / `--current` / `--future`, and the
   mode's CSS block decides what that means. A fifth line mode is a stylesheet
   block, not a fifth copy of the loop.

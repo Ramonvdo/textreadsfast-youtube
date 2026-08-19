@@ -230,14 +230,13 @@
 }
 
 /* ── line modes ──────────────────────────────────────────────────────────
-   Bionic, Plain, Highlighter and Karaoke are one line of words that differ
-   only in how the current word is marked. They share a renderer and this
-   block; each mode then adds the one rule that makes it itself. */
+   Bionic, Plain and Highlighter are one line of words that differ only in how
+   the current word is marked. They share a renderer and this block; each mode
+   then adds the one rule that makes it itself. */
 
 .trf-reader[data-mode="bionic"] .trf-word,
 .trf-reader[data-mode="plain"] .trf-word,
-.trf-reader[data-mode="highlight"] .trf-word,
-.trf-reader[data-mode="karaoke"] .trf-word {
+.trf-reader[data-mode="highlight"] .trf-word {
   position: static;
   transform: none;
   display: flex;
@@ -254,7 +253,6 @@
 .trf-reader[data-mode="bionic"] .trf-guide,
 .trf-reader[data-mode="plain"] .trf-guide,
 .trf-reader[data-mode="highlight"] .trf-guide,
-.trf-reader[data-mode="karaoke"] .trf-guide,
 .trf-reader[data-mode="focusline"] .trf-guide {
   display: none;
 }
@@ -303,19 +301,43 @@
 
 /* ── plain ── */
 
-/* The quietest the reader gets: no pivot, no bold, no accent anywhere. The
-   current word is simply the one at full strength. */
-.trf-reader[data-mode="plain"] .trf-lw {
-  color: var(--faded);
-}
-
-/* Scoped to the mode, not left to the shared `.trf-lw--current`. That rule is
-   one class, the one above it is an attribute plus a class, so unscoped it lost
-   and the current word came out faded — distinguished by opacity alone, in the
-   one mode that has nothing else to distinguish it with. */
-.trf-reader[data-mode="plain"] .trf-lw--current {
+/* An ordinary subtitle, and the only mode in which nothing moves.
+ *
+ * Every other mode advances one word per word — something on screen changes
+ * roughly three hundred times a minute. This shows a whole line, holds it
+ * completely still, and swaps once at a sentence or clause boundary. The line
+ * itself is built in `lines.ts`; all this has to do is stop the sliding-window
+ * machinery from applying.
+ *
+ * Uniform, therefore: no word is marked, because marking one is the thing that
+ * would make it move again. */
+.trf-reader[data-mode="plain"] .trf-lw,
+.trf-reader[data-mode="plain"] .trf-lw--current,
+.trf-reader[data-mode="plain"] .trf-lw--past,
+.trf-reader[data-mode="plain"] .trf-lw--future {
   color: var(--text);
   opacity: 1;
+}
+
+/* Wraps rather than clips. The other line modes are a window onto a longer
+   stream, so trimming the ends is honest and the mask says so. A caption is a
+   whole thought, and half of one is a bug — so the nowrap, the overflow clip
+   and the edge fade are all switched off here. */
+.trf-reader[data-mode="plain"] .trf-stage {
+  white-space: normal;
+  overflow: visible;
+  mask-image: none;
+}
+
+.trf-reader[data-mode="plain"] .trf-word {
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 0.25em;
+  text-align: center;
+  /* Full size, unlike the sliding line modes. There is no window to fit, so
+     there is no reason to shrink the text to make one fit. */
+  font-size: var(--trf-size);
+  line-height: 1.35;
 }
 
 /* ── highlighter ── */
@@ -344,21 +366,6 @@
   /* Reversed out of the block rather than tinted, so the contrast holds
      whatever accent someone picks in a custom palette. */
   color: var(--bg);
-}
-
-/* ── karaoke ── */
-
-/* Nothing is emphasised; the boundary between what has been said and what has
-   not is the whole signal, exactly as it is on a karaoke screen. */
-.trf-reader[data-mode="karaoke"] .trf-lw--past,
-.trf-reader[data-mode="karaoke"] .trf-lw--current {
-  color: var(--text);
-  opacity: 1;
-}
-
-.trf-reader[data-mode="karaoke"] .trf-lw--future {
-  color: var(--faded);
-  opacity: var(--trf-context-opacity, 0.34);
 }
 
 /* ── rsvp + bionic ── */
