@@ -15,6 +15,11 @@
 import { ReaderOverlay } from "../content/overlay";
 import { ProfileBar } from "./profileBar";
 import { mountAiSettings } from "./aiSettings";
+import {
+  loadDevicePrefs,
+  saveDevicePrefs,
+  type DevicePrefs,
+} from "../settings";
 import { classify } from "../reader-core/words";
 import { FONT_LABELS, type ReaderFont } from "../reader-core/fonts";
 import {
@@ -386,6 +391,70 @@ function runPreview(): void {
   }, 380);
 }
 
+/**
+ * Preferences that belong to this browser rather than to a reading style.
+ *
+ * Rendered by hand rather than through `FIELDS`, because that schema is bound
+ * to the synced `Settings` object and these deliberately are not part of it —
+ * a profile switch must not start opening read mode by itself.
+ */
+async function mountDevicePrefs(): Promise<void> {
+  const host = document.getElementById("group-device");
+  if (!host) return;
+
+  const prefs = await loadDevicePrefs();
+
+  const toggle = (
+    key: keyof DevicePrefs,
+    label: string,
+    help: string,
+  ): HTMLElement => {
+    const wrapper = el("div", "row");
+    const text = el("div");
+    const name = el("label", undefined, label);
+    text.append(name);
+    text.append(el("p", undefined, help));
+
+    const control = el("div", "control");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = prefs[key];
+    input.id = `d-${key}`;
+    name.htmlFor = input.id;
+    input.addEventListener("change", () => {
+      void saveDevicePrefs({ [key]: input.checked });
+    });
+    control.append(input);
+
+    wrapper.append(text, control);
+    return wrapper;
+  };
+
+  host.append(
+    toggle(
+      "autoReadMode",
+      "Open read mode automatically",
+      "Enter read mode as soon as a video with captions loads. Also on the toolbar popup, next to Open read mode.",
+    ),
+    toggle(
+      "statsTracking",
+      "Track study stats",
+      "Record watch time, coverage and how often you return to a video. Everything stays on this device; turning it off stops the recording, it does not merely hide it.",
+    ),
+  );
+}
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className?: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
 async function main(): Promise<void> {
   settings = await loadSettings();
 
@@ -409,6 +478,8 @@ async function main(): Promise<void> {
 
   const aiHost = document.getElementById("group-ai");
   if (aiHost) mountAiSettings(aiHost);
+
+  await mountDevicePrefs();
 
   runPreview();
 }

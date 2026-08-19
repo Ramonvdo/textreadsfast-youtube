@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  parseAiChapters,
+  transcriptForChapters,
   sectionLabel,
   chaptersFrom,
   chaptersFromAttributedDescription,
@@ -539,5 +541,87 @@ describe("chaptersFromTranscript spacing", () => {
     for (let i = 1; i < starts.length; i += 1) {
       expect(starts[i] - starts[i - 1]).toBeGreaterThanOrEqual(288_000);
     }
+  });
+});
+
+describe("parseAiChapters", () => {
+  it("reads the shape the prompt asks for", () => {
+    const chapters = parseAiChapters(
+      [
+        "0:00 | 1. Why leverage beats effort",
+        "2:30 | 2. Choosing a market",
+      ].join("\n"),
+      600_000,
+    );
+    expect(chapters).toEqual([
+      { title: "1. Why leverage beats effort", startMs: 0 },
+      { title: "2. Choosing a market", startMs: 150_000 },
+    ]);
+  });
+
+  // Models add bullets, swap the pipe for a dash, and wrap things in asterisks.
+  // None of that is worth throwing away an otherwise good outline over.
+  it("tolerates the ways a model drifts from the format", () => {
+    const chapters = parseAiChapters(
+      [
+        "Here are the chapters:",
+        "- 0:00 — **1. Opening claim**",
+        "* 1:05 - 2. The mechanism",
+        "2:10: 3. What to do",
+      ].join("\n"),
+      600_000,
+    );
+    expect(chapters.map((c) => c.title)).toEqual([
+      "1. Opening claim",
+      "2. The mechanism",
+      "3. What to do",
+    ]);
+  });
+
+  // A model that invents a timestamp past the end has lost the plot, and the
+  // row it produced would be unreachable in the navigation.
+  it("drops a timestamp past the end of the video", () => {
+    const chapters = parseAiChapters(
+      ["0:00 | 1. Real", "1:00 | 2. Also real", "99:00 | 3. Invented"].join(
+        "\n",
+      ),
+      120_000,
+    );
+    expect(chapters.map((c) => c.title)).toEqual(["1. Real", "2. Also real"]);
+  });
+
+  it("returns nothing rather than a one-row outline", () => {
+    expect(parseAiChapters("0:00 | 1. Only one", 600_000)).toEqual([]);
+    expect(parseAiChapters("no timestamps at all", 600_000)).toEqual([]);
+    expect(parseAiChapters("", 600_000)).toEqual([]);
+  });
+
+  it("handles hours", () => {
+    const chapters = parseAiChapters(
+      ["0:00 | 1. Start", "1:02:03 | 2. Late"].join("\n"),
+      7_200_000,
+    );
+    expect(chapters[1].startMs).toBe(3_723_000);
+  });
+});
+
+describe("transcriptForChapters", () => {
+  it("stamps blocks so the model can place its sections", () => {
+    const seed = transcriptForChapters(
+      [
+        { startMs: 0, endMs: 1_000, text: "opening words" },
+        { startMs: 2_000, endMs: 3_000, text: "still opening" },
+        { startMs: 20_000, endMs: 21_000, text: "a new subject" },
+      ],
+      15_000,
+    );
+    expect(seed.split("\n")).toEqual([
+      "0:00 opening words still opening",
+      "0:20 a new subject",
+    ]);
+  });
+
+  it("survives an empty transcript", () => {
+    expect(transcriptForChapters([])).toBe("");
   });
 });

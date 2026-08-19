@@ -11,11 +11,7 @@
  * string goes through `textContent`.
  */
 
-import {
-  formatTimestamp,
-  notesToMarkdown,
-  type ReadModeModel,
-} from "../readmode/model";
+import { formatTimestamp, sessionToMarkdown } from "../readmode/model";
 import type {
   FullSession,
   Granularity,
@@ -351,17 +347,20 @@ async function openDetail(videoId: string): Promise<void> {
 
   const exportBtn = el("button", undefined, "Export notes (.md)");
   exportBtn.type = "button";
-  exportBtn.disabled = full.notes.length === 0;
   exportBtn.addEventListener("click", () => {
     // The same function Read Mode exports with, so a note written today and one
     // exported from the library a month later produce identical files.
-    const model = {
+    // The summary goes too. A video studied without typing anything still
+    // produced something worth keeping, and an export that refuses on an empty
+    // note list is a dead button rather than an empty one.
+    const markdown = sessionToMarkdown({
       videoId: session.videoId,
       title: session.title,
       channel: session.channel,
       notes: full.notes,
-    } as ReadModeModel;
-    const blob = new Blob([notesToMarkdown(model)], {
+      summary: session.summaryMarkdown,
+    });
+    const blob = new Blob([markdown], {
       type: "text/markdown;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);

@@ -36,7 +36,19 @@ export interface BarLayoutOptions {
   /** Room for the baseline labels. */
   bottomGutter?: number;
   gap?: number;
+  /** Widest a single bar may be. See `MAX_BAR_WIDTH`. */
+  maxBarWidth?: number;
 }
+
+/**
+ * A bar is a bar, not a wall.
+ *
+ * With one or two buckets the even split gives each bar hundreds of pixels, and
+ * a single month of activity rendered as a grey slab the width of the panel
+ * with its label swallowed underneath. Capping the width and centring the
+ * series keeps one bucket looking like one bucket.
+ */
+const MAX_BAR_WIDTH = 46;
 
 /**
  * Where each bar sits.
@@ -56,8 +68,14 @@ export function layoutBars(
   if (values.length === 0 || width <= 0 || height <= 0) return [];
 
   const plot = Math.max(0, height - bottomGutter);
+  const maxBarWidth = options.maxBarWidth ?? MAX_BAR_WIDTH;
+
   const slot = width / values.length;
-  const barWidth = Math.max(1, slot - gap);
+  const barWidth = Math.max(1, Math.min(slot - gap, maxBarWidth));
+  // Centre the series when the cap leaves the row narrower than the panel, so a
+  // sparse chart reads as sparse rather than as left-aligned and broken.
+  const used = values.length * (barWidth + gap);
+  const offset = Math.max(0, (width - used) / 2);
   // An all-zero series must not divide by zero, and must not draw full-height
   // bars either — nothing studied should look like nothing studied.
   const peak = Math.max(...values, 0);
@@ -68,7 +86,7 @@ export function layoutBars(
     // an absent one.
     const barHeight = value > 0 ? Math.max(2, ratio * plot) : 0;
     return {
-      x: index * slot + gap / 2,
+      x: offset + index * (barWidth + gap) + gap / 2,
       y: plot - barHeight,
       width: barWidth,
       height: barHeight,

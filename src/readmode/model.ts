@@ -153,36 +153,67 @@ export function noteId(videoId: string, createdAt: number): string {
   return `${videoId}:${createdAt}`;
 }
 
-/**
- * Notes as Markdown, for export.
- *
- * Timestamps are written as links back into the video so they stay clickable
- * once the file is out of the browser and in a notes app.
- */
-export function notesToMarkdown(model: ReadModeModel): string {
-  const url = `https://www.youtube.com/watch?v=${model.videoId}`;
-  const lines: string[] = [`# ${model.title || model.videoId}`, ""];
+/** The parts of a session an export needs. Deliberately not the whole model,
+ *  so the library can export a session it never opened in Read Mode. */
+export interface Exportable {
+  videoId: string;
+  title: string;
+  channel: string;
+  notes: Note[];
+  /** The assistant's summary, if one has been generated. */
+  summary?: string | null;
+}
 
-  if (model.channel) lines.push(`${model.channel}`, "");
+/**
+ * A session as Markdown.
+ *
+ * Notes *and* the summary, because a video studied without typing anything
+ * still produced something worth keeping — and an export button that refuses on
+ * an empty note list reads as broken rather than as empty. Timestamps are
+ * written as links back into the video so they stay clickable once the file is
+ * out of the browser and in a notes app.
+ */
+export function sessionToMarkdown(input: Exportable): string {
+  const url = `https://www.youtube.com/watch?v=${input.videoId}`;
+  const lines: string[] = [`# ${input.title || input.videoId}`, ""];
+
+  if (input.channel) lines.push(input.channel, "");
   lines.push(`<${url}>`, "");
 
-  if (model.notes.length === 0) {
-    lines.push("_No notes._", "");
-    return lines.join("\n");
-  }
+  const summary = input.summary?.trim();
+  if (summary) lines.push("## Summary", "", summary, "");
 
   lines.push("## Notes", "");
-  for (const note of [...model.notes].sort((a, b) => a.atMs - b.atMs)) {
-    const stamp = formatTimestamp(note.atMs);
-    const seconds = Math.floor(note.atMs / 1000);
-    lines.push(`- [${stamp}](${url}&t=${seconds}s) ${note.text}`);
+  if (input.notes.length === 0) {
+    lines.push("_No notes taken._", "");
+  } else {
+    for (const note of [...input.notes].sort((a, b) => a.atMs - b.atMs)) {
+      const stamp = formatTimestamp(note.atMs);
+      const seconds = Math.floor(note.atMs / 1000);
+      lines.push(`- [${stamp}](${url}&t=${seconds}s) ${note.text}`);
+    }
+    lines.push("");
   }
-  lines.push("");
+
   return lines.join("\n");
 }
 
+/** For callers holding a whole model; the summary is its first assistant turn. */
+export function notesToMarkdown(model: ReadModeModel): string {
+  return sessionToMarkdown({
+    videoId: model.videoId,
+    title: model.title,
+    channel: model.channel,
+    notes: model.notes,
+    summary: model.messages.find((m) => m.role === "assistant")?.text ?? null,
+  });
+}
+
 /** A filename that will not upset Windows, macOS or Linux. */
-export function exportFilename(model: ReadModeModel): string {
+export function exportFilename(model: {
+  title: string;
+  videoId: string;
+}): string {
   const base = (model.title || model.videoId)
     .replace(/[\\/:*?"<>|]+/g, " ")
     .replace(/\s+/g, " ")

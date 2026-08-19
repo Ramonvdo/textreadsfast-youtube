@@ -17,9 +17,27 @@ describe("layoutBars", () => {
   });
 
   it("shares the width evenly", () => {
-    const bars = layoutBars([1, 1, 1, 1], options);
+    const bars = layoutBars([1, 1, 1, 1], { ...options, maxBarWidth: 999 });
     expect(bars.map((b) => b.x)).toEqual([0, 25, 50, 75]);
     expect(bars.every((b) => b.width === 25)).toBe(true);
+  });
+
+  /*
+   * A single month rendered as a grey slab the full width of the panel, with
+   * its label swallowed underneath. One bucket must look like one bucket.
+   */
+  it("caps a lone bar and centres it", () => {
+    const bars = layoutBars([1], { width: 320, height: 96 });
+    expect(bars[0].width).toBeLessThanOrEqual(46);
+    // Centred: as much space to the left as to the right.
+    const right = 320 - (bars[0].x + bars[0].width);
+    expect(Math.abs(bars[0].x - right)).toBeLessThanOrEqual(4);
+  });
+
+  it("still fills the row once there are enough bars", () => {
+    const bars = layoutBars(Array(30).fill(1), { width: 320, height: 96 });
+    expect(bars[0].width).toBeLessThan(46);
+    expect(bars[0].x).toBeLessThan(6);
   });
 
   // An all-zero week must not render as a full-height week. This is the bug a

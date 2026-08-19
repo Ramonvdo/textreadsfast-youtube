@@ -28,6 +28,7 @@ import {
 } from "./player";
 import * as library from "./library";
 import { streamChat } from "./ai";
+import { CHAPTER_PROMPT, parseAiChapters } from "./chapters";
 import { COVERAGE_BUCKET_MS, thumbnailUrl } from "../shared/libraryProtocol";
 import { isAdShowing } from "../content/ads";
 import type { ChatContext } from "../shared/aiProtocol";
@@ -47,6 +48,10 @@ export interface ReadModeContext {
   redrawReader?: () => void;
   /** Whether the word stream starts drawn over the video. */
   subtitles: boolean;
+  /** Record watch time, coverage and rewatch counts for this session. */
+  trackStats: boolean;
+  /** The transcript shaped for the chapter prompt, when one is needed. */
+  chapterSeed?: string;
   /** Apply and persist a change to that. Owned by the content script, which is
    *  the only place that holds both the reader session and the settings. */
   onSubtitlesChange?: (on: boolean) => void;
@@ -344,6 +349,52 @@ function runChat(
   });
 }
 
+/**
+ * Ask the model to name the sections of a video that has none of its own.
+ *
+ * Only when the outline is `derived` — YouTube's own chapters are always
+ * better, and paying for what the author already wrote would be absurd. The
+ * result is saved with the session, so this costs one call per video ever
+ * rather than one per visit.
+ */
+function requestAiChapters(seed: string): void {
+  if (!session || !seed) return;
+  const videoId = session.model.videoId;
+  const durationMs = session.model.durationMs;
+  let text = "";
+
+  streamChat({
+    system: CHAPTER_PROMPT,
+    messages: [{ role: "user", content: seed }],
+    context: {
+      videoId,
+      title: session.model.title,
+      channel: session.model.channel,
+      // The seed is already in the user turn; sending the transcript twice
+      // would double the cost of the one call this feature makes.
+      transcript: "",
+      notes: [],
+    },
+    onDelta: (delta) => {
+      text += delta;
+    },
+    onDone: () => {
+      if (!session || session.model.videoId !== videoId) return;
+      const chapters = parseAiChapters(text, durationMs);
+      if (chapters.length === 0) return; // keep the derived outline
+
+      setModel({
+        chapters: chaptersWithEnds(chapters, durationMs),
+        chapterSource: "ai",
+      });
+      void saveSession();
+    },
+    onError: () => {
+      // The derived outline is already on screen and is a fine fallback.
+    },
+  });
+}
+
 /* ── open / close ───────────────────────────────────────────────────────── */
 
 export async function openReadMode(
@@ -466,7 +517,11 @@ export async function openReadMode(
   session.dispose.push(shadowKeyboard(view.root));
   session.dispose.push(interceptFullscreen(view.root));
   session.dispose.push(trackPlayhead(ctx.video));
-  session.dispose.push(trackStats(ctx.video, ctx.videoId, ctx.durationMs));
+  // Opt-out rather than always-on: someone who does not want their viewing
+  // measured should not have it measured, not merely have it hidden.
+  if (ctx.trackStats) {
+    session.dispose.push(trackStats(ctx.video, ctx.videoId, ctx.durationMs));
+  }
 
   // The reader's own loop is frame-driven; a paused video presents none, so the
   // move alone would leave the last word at the old size.
@@ -483,6 +538,12 @@ export async function openReadMode(
    * every re-open regenerated it from scratch. Regenerating is still one click
    * away, but it is now a decision rather than a default.
    */
+  // A derived outline is a guess made of the speaker's own words; a model can
+  // name what a section is *about*. Asked for once, then saved.
+  if (ctx.chapterSource === "derived" && ctx.chapterSeed) {
+    requestAiChapters(ctx.chapterSeed);
+  }
+
   if (alreadySummarised) {
     setModel({ chat: { kind: "idle" } });
   } else if (ctx.transcript.trim().length > 0) {

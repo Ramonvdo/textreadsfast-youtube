@@ -31,9 +31,13 @@ import {
 } from "./readmodeBridge";
 import {
   DEFAULTS,
+  DEVICE_DEFAULTS,
+  loadDevicePrefs,
   loadSettings,
+  onDevicePrefsChanged,
   onSettingsChanged,
   saveSettings,
+  type DevicePrefs,
   type Settings,
 } from "../settings";
 
@@ -69,6 +73,8 @@ let adWatcher: { player: HTMLElement; observer: MutationObserver } | null =
  * the next one, which is exactly what a naive `setHidden(true)` here did.
  */
 let readerSuppressed = false;
+/** Device-local preferences: stats tracking and auto-entry. See `settings.ts`. */
+let prefs: DevicePrefs = DEVICE_DEFAULTS;
 
 /* ── page bridge ────────────────────────────────────────────────────────── */
 
@@ -223,6 +229,9 @@ async function start(): Promise<void> {
     video: found.video,
     ...track(found.video, usable, overlay),
   };
+
+  // Only now: before this, there was no transcript to open Read Mode with.
+  maybeAutoEnter();
 }
 
 /**
@@ -402,6 +411,7 @@ function onNavigate(): void {
   const id = videoIdOf();
   if (id === currentVideoId) return;
   currentVideoId = id;
+  autoEnteredFor = null;
   teardown();
   tracks = [];
   pendingBodies = [];
@@ -467,16 +477,21 @@ async function enterOrLeaveReadMode(): Promise<{
   const reader = session
     ? { words: session.words, video: session.video, redraw: session.redraw }
     : null;
-  const result = await toggleReadMode(reader, await summaryPrompt(), {
-    on: settings.readerInReadMode,
-    onChange: (on) => {
-      // One source of truth: the button writes the same setting the options
-      // page does, so the two can never disagree about whether the reader runs.
-      readerSuppressed = on ? false : isReadModeOpen();
-      session?.redraw();
-      void saveSettings({ readerInReadMode: on });
+  const result = await toggleReadMode(
+    reader,
+    await summaryPrompt(),
+    {
+      on: settings.readerInReadMode,
+      onChange: (on) => {
+        // One source of truth: the button writes the same setting the options
+        // page does, so the two can never disagree about whether the reader runs.
+        readerSuppressed = on ? false : isReadModeOpen();
+        session?.redraw();
+        void saveSettings({ readerInReadMode: on });
+      },
     },
-  });
+    prefs.statsTracking,
+  );
 
   // The reader travels with the player into read mode for free, because
   // `.trf-reader` is mounted inside `#movie_player`. Honouring the setting is
@@ -488,8 +503,32 @@ async function enterOrLeaveReadMode(): Promise<{
   return result;
 }
 
+/**
+ * Enter Read Mode by itself, if that is what the viewer asked for.
+ *
+ * Only once per video and only when a session with captions exists, since Read
+ * Mode without a transcript has nothing to show. Never fights a manual exit:
+ * `autoEnteredFor` remembers the video, so closing it stays closed.
+ */
+let autoEnteredFor: string | null = null;
+
+function maybeAutoEnter(): void {
+  if (!prefs.autoReadMode) return;
+  if (isReadModeOpen() || !session) return;
+  const id = videoIdOf();
+  if (!id || autoEnteredFor === id) return;
+  autoEnteredFor = id;
+  void enterOrLeaveReadMode();
+}
+
 async function init(): Promise<void> {
   settings = await loadSettings();
+  prefs = await loadDevicePrefs();
+
+  onDevicePrefsChanged((next) => {
+    prefs = next;
+    maybeAutoEnter();
+  });
 
   // The popup is an extension page and cannot reach the player, so it asks.
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

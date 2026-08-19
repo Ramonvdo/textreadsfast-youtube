@@ -123,7 +123,22 @@ describe("notesToMarkdown", () => {
   });
 
   it("says so rather than emitting an empty section", () => {
-    expect(notesToMarkdown(model())).toContain("_No notes._");
+    expect(notesToMarkdown(model())).toContain("_No notes taken._");
+  });
+
+  // Export must never be a dead button: a video studied without typing
+  // anything still produced a summary worth keeping.
+  it("carries the summary even when there are no notes", () => {
+    const md = notesToMarkdown(
+      model({
+        messages: [
+          { id: "m", role: "assistant", text: "The core idea.", createdAt: 1 },
+        ],
+      }),
+    );
+    expect(md).toContain("## Summary");
+    expect(md).toContain("The core idea.");
+    expect(md).toContain("_No notes taken._");
   });
 });
 

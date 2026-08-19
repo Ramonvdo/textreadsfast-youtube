@@ -96,3 +96,70 @@ export function onSettingsChanged(
   chrome.storage.onChanged.addListener(listener);
   return () => chrome.storage.onChanged.removeListener(listener);
 }
+
+/* ── device preferences ─────────────────────────────────────────────────── */
+
+/**
+ * Settings that belong to this browser rather than to a reading style.
+ *
+ * Kept in `chrome.storage.local` and deliberately outside `Settings`: a profile
+ * switch must not turn stats tracking off or start opening read mode by itself,
+ * and neither belongs in the 120-writes-a-minute sync budget.
+ */
+export interface DevicePrefs {
+  /** Record watch time, coverage and rewatch counts. */
+  statsTracking: boolean;
+  /** Enter read mode automatically when a video page loads. */
+  autoReadMode: boolean;
+}
+
+export const DEVICE_DEFAULTS: DevicePrefs = {
+  statsTracking: true,
+  autoReadMode: false,
+};
+
+const DEVICE_KEYS = {
+  statsTracking: "prefs.statsTracking",
+  autoReadMode: "prefs.autoReadMode",
+} as const;
+
+export async function loadDevicePrefs(): Promise<DevicePrefs> {
+  try {
+    const stored = await chrome.storage.local.get({
+      [DEVICE_KEYS.statsTracking]: DEVICE_DEFAULTS.statsTracking,
+      [DEVICE_KEYS.autoReadMode]: DEVICE_DEFAULTS.autoReadMode,
+    });
+    return {
+      statsTracking: Boolean(stored[DEVICE_KEYS.statsTracking]),
+      autoReadMode: Boolean(stored[DEVICE_KEYS.autoReadMode]),
+    };
+  } catch {
+    return { ...DEVICE_DEFAULTS };
+  }
+}
+
+export async function saveDevicePrefs(
+  patch: Partial<DevicePrefs>,
+): Promise<void> {
+  const write: Record<string, boolean> = {};
+  for (const [name, value] of Object.entries(patch)) {
+    const key = DEVICE_KEYS[name as keyof DevicePrefs];
+    if (key !== undefined && typeof value === "boolean") write[key] = value;
+  }
+  if (Object.keys(write).length > 0) await chrome.storage.local.set(write);
+}
+
+export function onDevicePrefsChanged(
+  handler: (prefs: DevicePrefs) => void,
+): () => void {
+  const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: string,
+  ): void => {
+    if (area !== "local") return;
+    if (!Object.values(DEVICE_KEYS).some((key) => key in changes)) return;
+    void loadDevicePrefs().then(handler);
+  };
+  chrome.storage.onChanged.addListener(listener);
+  return () => chrome.storage.onChanged.removeListener(listener);
+}

@@ -17,7 +17,13 @@ import {
   loadProfiles,
   type Profile,
 } from "../profiles";
-import { loadSettings, saveSettings, type Settings } from "../settings";
+import {
+  loadDevicePrefs,
+  loadSettings,
+  saveDevicePrefs,
+  saveSettings,
+  type Settings,
+} from "../settings";
 
 const list = document.getElementById("profiles") as HTMLDivElement | null;
 const toggle = document.getElementById("enabled") as HTMLInputElement | null;
@@ -25,6 +31,9 @@ const settingsButton = document.getElementById("open-settings");
 const readModeButton = document.getElementById("read-mode");
 const libraryButton = document.getElementById("open-library");
 const note = document.getElementById("popup-note");
+const autoReadMode = document.getElementById(
+  "auto-read-mode",
+) as HTMLInputElement | null;
 
 let settings: Settings | null = null;
 let activeId = "default";
@@ -78,6 +87,14 @@ async function main(): Promise<void> {
     toggle.addEventListener("change", () => {
       void saveSettings({ enabled: toggle.checked });
       if (settings) settings.enabled = toggle.checked;
+    });
+  }
+
+  if (autoReadMode) {
+    const prefs = await loadDevicePrefs();
+    autoReadMode.checked = prefs.autoReadMode;
+    autoReadMode.addEventListener("change", () => {
+      void saveDevicePrefs({ autoReadMode: autoReadMode.checked });
     });
   }
 

@@ -681,3 +681,97 @@ export function videoMetaFrom(playerResponse: unknown): VideoMeta | null {
     durationMs: Number.isFinite(seconds) ? seconds * 1000 : 0,
   };
 }
+
+/* ── AI-generated sections ──────────────────────────────────────────────── */
+
+/**
+ * Ask a model to name the sections of a video that has no chapters.
+ *
+ * The heuristic parser above is a fallback, not a goal: it can only ever pick
+ * words the speaker happened to say, so a rambling opening produces a rambling
+ * title. A model reading the transcript can name what a section is *about*,
+ * which is the difference between "Career capital is about the" and
+ * "1. Why leverage beats effort".
+ */
+export const CHAPTER_PROMPT = `You are given a video transcript with timestamps.
+
+Split it into 5 to 12 sections and name each one, like the chapters of a thesis.
+
+Rules:
+- Output ONLY lines of the form: mm:ss | N. Title
+- N counts from 1. Titles are 2 to 6 words, plain and concrete.
+- Name what the section is ABOUT, not the words that open it.
+- The first section starts at 0:00.
+- No preamble, no commentary, no markdown, no bullet points.
+
+Example of the exact shape expected:
+0:00 | 1. Why leverage beats effort
+2:30 | 2. Choosing a market
+7:05 | 3. Building the first offer`;
+
+/**
+ * Parse what the model sent back.
+ *
+ * Deliberately forgiving about everything except the timestamp: models add
+ * stray prose, wrap lines in bullets, or use a dash instead of a pipe, and none
+ * of that is worth discarding an otherwise good outline over. A line without a
+ * readable timestamp is dropped rather than guessed at.
+ */
+export function parseAiChapters(text: string, durationMs: number): Chapter[] {
+  const chapters: Chapter[] = [];
+
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/^[\s>*-]+/, "").trim();
+    if (!line) continue;
+
+    const match = /^((?:\d{1,2}:)?\d{1,2}:\d{2})\s*[|–—:-]?\s*(.+)$/.exec(line);
+    if (!match) continue;
+
+    const startMs = parseStamp(match[1]);
+    if (startMs === null) continue;
+    // A model that invents a timestamp past the end of the video has lost the
+    // plot; keeping it would put an unreachable row in the navigation.
+    if (durationMs > 0 && startMs > durationMs) continue;
+
+    const title = match[2]
+      .replace(/^\**\s*/, "")
+      .replace(/\**$/, "")
+      .trim();
+    if (title) chapters.push({ title, startMs });
+  }
+
+  // Fewer than two is not an outline, and the heuristic fallback is better than
+  // a single row claiming to be chapters.
+  return chapters.length >= 2 ? clean(chapters) : [];
+}
+
+/** The transcript as the chapter prompt wants it: one timestamped line each. */
+export function transcriptForChapters(
+  lines: TranscriptLine[],
+  everyMs = 15_000,
+): string {
+  const out: string[] = [];
+  let nextAt = 0;
+  let buffer: string[] = [];
+
+  const flush = (at: number): void => {
+    if (buffer.length === 0) return;
+    const total = Math.floor(at / 1000);
+    const stamp = `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+    out.push(`${stamp} ${buffer.join(" ")}`);
+    buffer = [];
+  };
+
+  let blockStart = 0;
+  for (const line of lines) {
+    if (line.startMs >= nextAt) {
+      flush(blockStart);
+      blockStart = line.startMs;
+      nextAt = line.startMs + everyMs;
+    }
+    buffer.push(line.text);
+  }
+  flush(blockStart);
+
+  return out.join("\n");
+}

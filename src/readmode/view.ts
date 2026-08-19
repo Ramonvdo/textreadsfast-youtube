@@ -404,7 +404,13 @@ export function renderReadMode(
     }
 
     notesEmpty.hidden = next.notes.length > 0;
-    exportBtn.disabled = next.notes.length === 0;
+    // Never disabled. Even with no notes there is a title, a link and often a
+    // summary worth keeping, and a button that silently does nothing reads as
+    // broken rather than as empty.
+    exportBtn.title =
+      next.notes.length === 0
+        ? "Export the summary and video details"
+        : `Export ${next.notes.length} notes`;
   }
 
   function paintMessage(message: ChatMessage): HTMLElement {

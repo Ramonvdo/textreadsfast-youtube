@@ -187,20 +187,25 @@ describe("notes", () => {
     expect(h.onSeek).toHaveBeenCalledWith(621_000);
   });
 
-  it("disables export until there is something to export, then exports", () => {
+  // Never disabled. Even with no notes there is a title, a link and often a
+  // summary worth keeping, and a button that silently does nothing reads as
+  // broken rather than as empty.
+  it("exports whether or not there are notes", () => {
     const h = handlers();
     const view = renderReadMode(model(), h);
     const button =
       view.root.querySelector<HTMLButtonElement>(".trf-rm-export")!;
-    expect(button.disabled).toBe(true);
+
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(h.onExport).toHaveBeenCalledTimes(1);
 
     view.update(
       model({ notes: [{ id: "n", atMs: 0, text: "x", createdAt: 1 }] }),
     );
     expect(button.disabled).toBe(false);
-
     button.click();
-    expect(h.onExport).toHaveBeenCalled();
+    expect(h.onExport).toHaveBeenCalledTimes(2);
   });
 });
 

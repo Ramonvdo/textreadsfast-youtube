@@ -11,6 +11,7 @@
 import {
   chaptersFrom,
   chaptersFromTranscript,
+  transcriptForChapters,
   videoMetaFrom,
 } from "../readmode/chapters";
 import {
@@ -86,6 +87,7 @@ export async function toggleReadMode(
   reader: ReaderSession | null,
   summaryPrompt: string,
   subtitles: { on: boolean; onChange: (on: boolean) => void },
+  trackStats: boolean,
 ): Promise<ToggleResult> {
   if (isReadModeOpen()) {
     const closed = await closeReadMode();
@@ -113,6 +115,12 @@ export async function toggleReadMode(
   // YouTube's own chapters are always preferred. Deriving from transcript gaps
   // is the honest fallback when the video simply has none — labelled as such in
   // the view so nobody mistakes a guess for the author's own outline.
+  const lines = reader.words.map((w) => ({
+    startMs: w.startMs,
+    endMs: w.endMs,
+    text: w.word.text,
+  }));
+
   if (chapters.length === 0 && reader.words.length > 0) {
     chapters = chaptersFromTranscript(
       reader.words.map((w) => ({
@@ -135,9 +143,13 @@ export async function toggleReadMode(
       durationMs,
       chapters,
       chapterSource,
+      // Only built when it will be used; a model never sees this otherwise.
+      chapterSeed:
+        chapterSource === "derived" ? transcriptForChapters(lines) : undefined,
       redrawReader: reader.redraw,
       subtitles: subtitles.on,
       onSubtitlesChange: subtitles.onChange,
+      trackStats,
     },
     summaryPrompt,
   );
