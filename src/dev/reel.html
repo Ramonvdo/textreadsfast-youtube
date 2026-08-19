@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reader reel</title>
+    <link rel="stylesheet" href="reader.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #101012;
+        color: #cfcac2;
+        font-family: "Geist", system-ui, sans-serif;
+      }
+
+      /* A scrollbar would be captured as part of every frame. */
+      ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+      }
+
+      .strip {
+        padding: 0 16px 12px;
+      }
+
+      .strip:first-child {
+        padding-top: 16px;
+      }
+
+      h2 {
+        margin: 0 0 5px;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: #7d7871;
+      }
+
+      h2:empty {
+        display: none;
+      }
+
+      /*
+       * Stands in for the player.
+       *
+       * A still gradient rather than a real frame: every pixel outside the
+       * words is identical from frame to frame, which is exactly what a GIF's
+       * delta compression wants. A moving backdrop would triple the file for
+       * something nobody is looking at.
+       */
+      .player {
+        position: relative;
+        border-radius: 9px;
+        overflow: hidden;
+        /*
+         * Two close stops, and no radial.
+         *
+         * A GIF has 256 colours. A rich gradient spends most of them on a
+         * backdrop nobody is looking at, and what is left cannot render the
+         * accent on the pivot letter -- which is the one pixel-level detail the
+         * whole animation exists to show. It came out washed pink before this.
+         */
+        background: linear-gradient(170deg, #262b31 0%, #191c20 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <script src="reel.js"></script>
+  </body>
+</html>

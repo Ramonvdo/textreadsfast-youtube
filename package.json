@@ -15,7 +15,8 @@
     "check-drift": "node scripts/check-drift.mjs",
     "check": "pnpm run typecheck && pnpm test && pnpm run check-drift && pnpm run check-boundaries",
     "check-boundaries": "node scripts/check-boundaries.mjs",
-    "shoot": "node scripts/build.mjs --dev && python scripts/shoot.py"
+    "shoot": "node scripts/build.mjs --dev && python scripts/shoot.py",
+    "reel": "node scripts/build.mjs --dev && python scripts/reel.py"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

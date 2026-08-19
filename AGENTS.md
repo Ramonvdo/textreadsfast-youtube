@@ -26,6 +26,7 @@ pnpm test               # caption parsing and word lookup
 pnpm run check-drift    # reader-core vs the desktop app
 pnpm run check          # all of the above
 pnpm run shoot          # screenshot both harnesses, assert their geometry
+pnpm run reel           # re-record the README's GIFs
 pnpm run format         # prettier; `src/reader-core` is ignored on purpose
 ```
 
@@ -166,6 +167,16 @@ shoot` rather than by any test.
   friends. A `[data-theme="custom"]` block maps them across, so all eight
   palettes are still defined in one stylesheet rather than half in CSS and half
   in TypeScript. `apply()` clears them for every other theme.
+
+- **The README's GIFs are generated, not recorded by hand.** `pnpm run reel`
+  drives `src/dev/reel.ts` a frame at a time and assembles them, so frame _n_ is
+  word _n_ and the loop closes exactly. Two things keep the files small enough
+  for a README: `disposal=1` (2 forces every frame to be written in full) and
+  dithering off (its speckle differs per frame, so the delta encoder can no
+  longer tell what actually changed). Both together took `modes.gif` from 2.7MB
+  to 0.6MB. The reel backdrop is a two-stop gradient for the same reason — a
+  richer one spends the 256-colour budget on scenery and leaves the pivot accent
+  washed pink.
 
 - **Charts with text in them must be drawn at their real pixel width.**
   `preserveAspectRatio="none"` on a fixed 320-unit viewBox at `width: 100%`

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/128.png" width="88" alt="TextReadsFast for YouTube" />
+  <img src="icons/128.png" width="80" alt="" />
 </p>
 
 <h1 align="center">TextReadsFast for YouTube</h1>
@@ -12,20 +12,188 @@
   <a href="LICENSE"><img alt="MIT licensed" src="https://img.shields.io/badge/license-MIT-blue.svg" /></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/manifest-v3-lightgrey.svg" />
   <img alt="Chrome and Edge" src="https://img.shields.io/badge/chrome%20%7C%20edge-supported-brightgreen.svg" />
+  <img alt="No telemetry" src="https://img.shields.io/badge/telemetry-none-success.svg" />
 </p>
 
-A browser extension that replaces YouTube's captions with a single word held at
-a fixed focal point. Your eyes stop moving, so the words can move faster than
-you could read them line by line.
+<p align="center">
+  <img src=".github/assets/rsvp.gif" width="720" alt="One word at a time, with the pivot letter held at a fixed point" />
+</p>
 
-The speed comes from YouTube's own playback rate. Set it to 2x or 3x and the
-reader tracks it exactly, because it reads from the video clock rather than a
-timer of its own.
+<p align="center">
+  <em>Your eyes stop moving. The words move instead — and the red letter never leaves that column.</em>
+</p>
+
+Reading is slow mostly because the eye jumps. RSVP removes the jumps by holding
+the text still and moving the words, and pins the one letter your brain uses to
+recognise a word to the same spot every time.
+
+The pace comes from YouTube's own playback rate: set the video to 2x and the
+reader tracks it exactly, because it reads the video clock rather than a timer
+of its own. Pausing, seeking and speed changes all just work.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**Six ways to read**
+
+RSVP, RSVP + Bionic, Bionic, Static, Highlighter, Focus line. Nine profiles,
+ten palettes, and a custom one.
+
+</td>
+<td width="33%" valign="top">
+
+**A study mode**
+
+Chapters, timestamped notes, an optional AI assistant, and export to one
+Markdown file.
+
+</td>
+<td width="33%" valign="top">
+
+**Nothing phones home**
+
+No analytics, no account, no server. The assistant is opt-in and uses your own
+API key.
+
+</td>
+</tr>
+</table>
 
 > **Status: early.** Built and unit-tested, but not yet run against a broad
 > range of real videos. See [Known risks](#known-risks).
 
 ---
+
+## Six ways to read
+
+All six reading the same sentence, at the same instant:
+
+<p align="center">
+  <img src=".github/assets/modes.gif" width="740" alt="The six reading modes running side by side" />
+</p>
+
+| Mode              | What it does                                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.                                  |
+| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead.                              |
+| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.                                     |
+| **Static**        | An ordinary subtitle. Holds completely still and swaps a whole line at a time — the only mode in which nothing moves. |
+| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.                                  |
+| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                                                |
+
+## Ready-made looks
+
+Switch profile mid-video from the toolbar — the right settings depend on what is
+on screen.
+
+<table>
+<tr>
+<td width="50%" align="center">
+
+<img src=".github/assets/profile-lyric.gif" alt="The Lyric profile" />
+
+**Lyric** — gold italic on a dark band
+
+</td>
+<td width="50%" align="center">
+
+<img src=".github/assets/profile-caption-box.gif" alt="The Caption Box profile" />
+
+**Caption Box** — white on solid black
+
+</td>
+</tr>
+</table>
+
+| Profile          | What it is for                                                   |
+| ---------------- | ---------------------------------------------------------------- |
+| **Default**      | One word at a fixed point, dark, a little context either side.   |
+| **Peripheral**   | Pinned word, bolded context. Focus and preview at once.          |
+| **Serif Flow**   | A whole line at once, serif on neutral grey. Reads like a page.  |
+| **Reading Room** | Light and warm, for daytime and bright video.                    |
+| **Night Study**  | Bionic on deep blue-grey, for a lecture in the dark.             |
+| **Sprint**       | Large, narrow, almost no context. For 2x and above.              |
+| **Highlighter**  | A block on the word being spoken. Holds up at speed.             |
+| **Lyric**        | Gold italic serif on a dark band, the width of the picture.      |
+| **Caption Box**  | White on solid black. The plainest, most legible thing there is. |
+
+Ten palettes including a **Custom** one with four colour pickers, plus a slider
+for how much of the video shows through the card — down to none at all. On top
+of any of them: **slant**, **letter case**, **weight**, and an **outline**
+around every glyph. The outline matters most — a dark edge is what makes text
+legible over an arbitrary moving picture.
+
+Editing any control leaves the change live and marks the profile _modified_ —
+built-ins are never overwritten, so **Default** stays exactly as shipped
+whatever you do to it. **Save as…** keeps your version under its own name.
+
+> Two honest limits. No italic faces are bundled, so the slant is the browser
+> slanting the upright one — fine on the serifs, less so on the monospaces. And
+> not every family ships every weight (Geist stops at 600), above which the
+> browser thickens it itself and reads thinner than a real bold. Both are
+> because `src/reader-core/fonts.css` is byte-identical to the desktop app, so
+> adding faces means changing both repositories.
+
+## Read Mode
+
+A study view for the video you are already watching. Press **Shift+R**, or use
+the toolbar popup.
+
+<p align="center">
+  <img src=".github/assets/read-mode.png" width="880" alt="Read Mode: chapters, the video, notes, and the assistant" />
+</p>
+
+- **Chapters, on the left.** YouTube's own chapter list when the video has one.
+  When it does not, the transcript is segmented and the sections are named by a
+  model — asked for once, then saved.
+- **Notes, under the video.** Start typing anywhere and the note box takes it.
+  Each note keeps the timestamp it was written at; clicking one seeks there.
+- **An assistant, on the right.** Summarises the transcript when you open the
+  view, and answers questions about it afterwards. **Requires your own API key
+  — see [Privacy and data](#privacy-and-data).**
+- **Export** to a single Markdown file — summary, notes, the questions you
+  asked, and optionally the whole transcript. Point it at an Obsidian vault or
+  pick the folder each time.
+- **A library** of past sessions, with watch time, coverage and rewatch counts.
+  Tracking is a setting, and turning it off stops the recording rather than
+  merely hiding it.
+
+The reader keeps running over the video the whole time. Read Mode changes the
+page around the video, not the video.
+
+## How it differs from the desktop app
+
+[TextReadsFast](https://github.com/Ramonvdo/textreadsfast) transcribes your
+computer's audio live, which means guessing when each word was spoken and pacing
+against a backlog that can never quite be trusted.
+
+Here, YouTube hands over the entire transcript with timings attached before
+playback starts. So there is no transcription, no backlog, no pacing to
+estimate — the current word is a lookup against `video.currentTime`. Seeking,
+pausing and playback rate all work without a line of code, because the video
+clock already accounts for them.
+
+The two share their reading engine — the pivot maths and alignment — so a word
+lands identically in both. See [`src/reader-core/`](src/reader-core/README.md).
+
+## Install
+
+Not yet on the Chrome Web Store. To run it now:
+
+```bash
+pnpm install
+pnpm run build
+```
+
+Then open `chrome://extensions`, enable **Developer mode**, choose **Load
+unpacked**, and select **`dist/`** — not the repository root. The root has no
+manifest precisely so it cannot be loaded by mistake; `dist/` is the extension.
+
+Chrome and Edge; Firefox is a later port, since its MV3 differs enough to be its
+own task.
+
+`pnpm run watch` rebuilds on change — reload the extension to pick changes up.
 
 ## The science
 
@@ -163,121 +331,6 @@ the lines are rebuilt from the punctuation, breaking at sentences, at clauses
 once a line is worth ending, and at a hard cap so an unpunctuated
 auto-transcript cannot run off the card. See
 [`src/content/lines.ts`](src/content/lines.ts).
-
-## Reading modes
-
-RSVP is the point of the thing, but it is not for everyone or for every video.
-Six modes, all reading the same word stream:
-
-<p align="center">
-  <img src=".github/assets/reading-modes.png" width="820" alt="The six reading modes and the caption styles" />
-</p>
-
-| Mode              | What it does                                                                                                          |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.                                  |
-| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead.                              |
-| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.                                     |
-| **Static**        | An ordinary subtitle. Holds completely still and swaps a whole line at a time — the only mode in which nothing moves. |
-| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.                                  |
-| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                                                |
-
-Ten palettes, including a **Custom** one with four colour pickers, plus a
-slider for how much of the video shows through the card behind the words — down
-to none at all, for text that sits directly on the picture.
-
-The typography composes on top of any of them: **slant**, **letter case**,
-**weight**, and an **outline** around every glyph. The outline is the one that
-matters most — a dark edge is what makes text legible over an arbitrary moving
-picture, and it is why a caption with no card behind it can work at all.
-
-> Two honest limits. No italic faces are bundled, so the slant is the browser
-> slanting the upright one — fine on the serifs, less so on the monospaces. And
-> not every family ships every weight (Geist stops at 600), above which the
-> browser thickens it itself and it reads thinner than a real bold. Both are
-> because `src/reader-core/fonts.css` is byte-identical to the desktop app, so
-> adding faces means changing both repositories.
-
-## Profiles
-
-Click the toolbar icon to switch profile mid-video, which is usually when you
-want to: the right settings depend on what is on screen.
-
-| Profile          | What it is for                                                          |
-| ---------------- | ----------------------------------------------------------------------- |
-| **Default**      | One word at a fixed point, dark, a little context either side.          |
-| **Peripheral**   | Pinned word, bolded context. Focus and preview at once.                 |
-| **Serif Flow**   | A whole line at once, serif on neutral grey. Reads like a page.         |
-| **Reading Room** | Light and warm, for daytime and bright video.                           |
-| **Night Study**  | Bionic on deep blue-grey, for a lecture in the dark.                    |
-| **Sprint**       | Large, narrow, almost no context. For 2x and above.                     |
-| **Highlighter**  | A block on the word being spoken. Holds up at speed.                    |
-| **Lyric**        | Gold italic serif on a translucent blue band, the width of the picture. |
-| **Caption Box**  | White on solid black. The plainest, most legible thing there is.        |
-
-Editing any control leaves the change live and marks the profile _modified_ —
-built-ins are never overwritten, so **Default** stays exactly as shipped
-whatever you do to it. **Save as…** keeps your version under its own name.
-
-## Read Mode
-
-A study view for the video you are already watching. Press **Shift+R**, or use
-the toolbar popup.
-
-<p align="center">
-  <img src=".github/assets/read-mode.png" width="880" alt="Read Mode: chapters, the video, notes, and the assistant" />
-</p>
-
-- **Chapters, on the left.** YouTube's own chapter list when the video has one.
-  When it does not, the transcript is segmented and the sections are named by a
-  model — asked for once, then saved.
-- **Notes, under the video.** Start typing anywhere and the note box takes it.
-  Each note keeps the timestamp it was written at; clicking one seeks there.
-- **An assistant, on the right.** Summarises the transcript when you open the
-  view, and answers questions about it afterwards. **Requires your own API key
-  — see [Privacy and data](#privacy-and-data).**
-- **Export** to a single Markdown file — summary, notes, the questions you
-  asked, and optionally the whole transcript. Point it at an Obsidian vault or
-  pick the folder each time.
-- **A library** of past sessions, with watch time, coverage and rewatch counts.
-  Tracking is a setting, and turning it off stops the recording rather than
-  merely hiding it.
-
-The reader keeps running over the video the whole time. Read Mode changes the
-page around the video, not the video.
-
-## How it differs from the desktop app
-
-[TextReadsFast](https://github.com/Ramonvdo/textreadsfast) transcribes your
-computer's audio live, which means guessing when each word was spoken and pacing
-against a backlog that can never quite be trusted.
-
-Here, YouTube hands over the entire transcript with timings attached before
-playback starts. So there is no transcription, no backlog, no pacing to
-estimate — the current word is a lookup against `video.currentTime`. Seeking,
-pausing and playback rate all work without a line of code, because the video
-clock already accounts for them.
-
-The two share their reading engine — the pivot maths and alignment — so a word
-lands identically in both. See [`src/reader-core/`](src/reader-core/README.md).
-
-## Install
-
-Not yet on the Chrome Web Store. To run it now:
-
-```bash
-pnpm install
-pnpm run build
-```
-
-Then open `chrome://extensions`, enable **Developer mode**, choose **Load
-unpacked**, and select **`dist/`** — not the repository root. The root has no
-manifest precisely so it cannot be loaded by mistake; `dist/` is the extension.
-
-Chrome and Edge; Firefox is a later port, since its MV3 differs enough to be its
-own task.
-
-`pnpm run watch` rebuilds on change — reload the extension to pick changes up.
 
 ## Settings
 

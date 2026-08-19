@@ -31,7 +31,13 @@ const entries = {
   background: "src/background/index.ts",
   library: "src/library/library.ts",
   keysetup: "src/keysetup/keysetup.ts",
-  ...(dev ? { harness: "src/dev/harness.ts", modes: "src/dev/modes.ts" } : {}),
+  ...(dev
+    ? {
+        harness: "src/dev/harness.ts",
+        modes: "src/dev/modes.ts",
+        reel: "src/dev/reel.ts",
+      }
+    : {}),
 };
 
 /** The font stylesheet ships as-is, but its `url()`s must resolve against the
@@ -109,6 +115,8 @@ async function copyStatic() {
       resolve(root, "src/dev/modes.html"),
       resolve(outdir, "modes.html"),
     );
+    // The steppable one, which scripts/reel.py records into the README's GIFs.
+    await cp(resolve(root, "src/dev/reel.html"), resolve(outdir, "reel.html"));
     await cp(resolve(root, "src/dev/fixtures"), resolve(outdir, "fixtures"), {
       recursive: true,
     });
