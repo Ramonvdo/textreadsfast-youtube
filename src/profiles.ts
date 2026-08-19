@@ -49,6 +49,11 @@ const PROFILE_FIELDS: Record<keyof ProfileSettings, true> = {
   customText: true,
   customFaded: true,
   customAccent: true,
+  fontStyle: true,
+  textCase: true,
+  textWeight: true,
+  textOutline: true,
+  lineWords: true,
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,
@@ -93,6 +98,26 @@ type Palette = Pick<
   ProfileSettings,
   "customBackground" | "customText" | "customFaded" | "customAccent"
 >;
+
+/**
+ * Typography a profile does not deliberately style.
+ *
+ * Spread into every profile that predates these settings, so each keeps exactly
+ * the appearance it shipped with rather than quietly gaining italics or an
+ * outline on the day the setting was added.
+ */
+type Typography = Pick<
+  ProfileSettings,
+  "fontStyle" | "textCase" | "textWeight" | "textOutline" | "lineWords"
+>;
+
+const PLAIN_TYPE: Typography = {
+  fontStyle: DEFAULTS.fontStyle,
+  textCase: DEFAULTS.textCase,
+  textWeight: DEFAULTS.textWeight,
+  textOutline: DEFAULTS.textOutline,
+  lineWords: DEFAULTS.lineWords,
+};
 
 const UNUSED_PALETTE: Palette = {
   customBackground: DEFAULTS.customBackground,
@@ -146,6 +171,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       hideNativeCaptions: true,
       readerInReadMode: true,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
     },
   },
   {
@@ -171,6 +197,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       bionicAccent: true,
       backgroundOpacity: 0.88,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -197,6 +224,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       bionicAccent: true,
       backgroundOpacity: 0.88,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -223,6 +251,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       bionicAccent: true,
       backgroundOpacity: 0.88,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -251,6 +280,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       bionicAccent: true,
       backgroundOpacity: 0.88,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -277,6 +307,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       bionicAccent: true,
       backgroundOpacity: 0.88,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -313,6 +344,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       hideNativeCaptions: true,
       readerInReadMode: true,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
     },
   },
   {
@@ -341,6 +373,118 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       hideNativeCaptions: true,
       readerInReadMode: true,
       ...UNUSED_PALETTE,
+      ...PLAIN_TYPE,
+    },
+  },
+  {
+    id: "lyric",
+    name: "Lyric",
+    blurb:
+      "Gold italic serif on a translucent blue band, the width of the picture.",
+    builtIn: true,
+    settings: {
+      mode: "plain",
+      theme: "lyric",
+      font: "literata",
+      fontSize: 21,
+      letterSpacing: 0,
+      autoScale: true,
+      // Low and wide: this style belongs at the very bottom of the frame,
+      // spanning it, the way a burned-in lyric line does.
+      verticalPosition: 5,
+      boxWidth: 96,
+      contextBefore: 3,
+      contextAfter: 4,
+      contextOpacity: 0.48,
+      bionicAccent: true,
+      // A band you can see the picture through, not a panel sitting on it.
+      backgroundOpacity: 0.55,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
+      fontStyle: "italic",
+      textCase: "none",
+      textWeight: 500,
+      // Just enough to keep gold legible where the band runs over a bright
+      // part of the picture.
+      textOutline: 1,
+      lineWords: 12,
+    },
+  },
+  {
+    id: "caption-box",
+    name: "Caption Box",
+    blurb: "White on solid black. The plainest, most legible thing there is.",
+    builtIn: true,
+    settings: {
+      mode: "plain",
+      theme: "caption",
+      font: "geist",
+      fontSize: 26,
+      letterSpacing: 0,
+      autoScale: true,
+      verticalPosition: 8,
+      boxWidth: 64,
+      contextBefore: 3,
+      contextAfter: 4,
+      contextOpacity: 0.48,
+      bionicAccent: true,
+      // Effectively solid. The whole point of this style is that the video
+      // behind it never competes with the words.
+      backgroundOpacity: 0.97,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
+      fontStyle: "normal",
+      textCase: "none",
+      textWeight: 700,
+      // None needed: nothing shows through a solid box for it to fight.
+      textOutline: 0,
+      lineWords: 7,
+    },
+  },
+  {
+    id: "pop",
+    name: "Pop",
+    blurb:
+      "Big uppercase over the picture, no card. Two or three words at a time.",
+    builtIn: true,
+    settings: {
+      mode: "plain",
+      theme: "pop",
+      // Atkinson rather than Geist, because Geist ships no weight above 600 and
+      // asking for more only gets synthetic bold, which came out visibly
+      // lighter than this style wants. Atkinson has a real 700 -- and being
+      // drawn for low vision is no handicap for a caption over video.
+      font: "atkinson_hyperlegible",
+      fontSize: 38,
+      letterSpacing: 0.5,
+      autoScale: true,
+      verticalPosition: 16,
+      boxWidth: 84,
+      contextBefore: 3,
+      contextAfter: 4,
+      contextOpacity: 0.48,
+      bionicAccent: true,
+      // No card at all. The outline is what makes this readable instead.
+      backgroundOpacity: 0,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
+      fontStyle: "normal",
+      textCase: "upper",
+      textWeight: 700,
+      // At maximum: with no card behind it the outline is the only thing
+      // separating the words from the picture, and it doubles as visual weight.
+      textOutline: 4,
+      // Short and punchy. A long line in this size would cover the picture.
+      lineWords: 3,
     },
   },
 ];

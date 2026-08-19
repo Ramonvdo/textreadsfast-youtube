@@ -148,7 +148,11 @@ export class ReaderOverlay {
     const fontChanged =
       settings.font !== this.settings.font ||
       settings.fontSize !== this.settings.fontSize ||
-      settings.letterSpacing !== this.settings.letterSpacing;
+      settings.letterSpacing !== this.settings.letterSpacing ||
+      // Both change glyph widths, so a cached pixel offset measured before
+      // them puts the pivot in the wrong place.
+      settings.textWeight !== this.settings.textWeight ||
+      settings.fontStyle !== this.settings.fontStyle;
     this.settings = settings;
 
     const stack = FONT_STACKS[settings.font];
@@ -179,6 +183,21 @@ export class ReaderOverlay {
     this.root.style.setProperty(
       "--trf-bg-opacity",
       `${(opacity * 100).toFixed(1)}%`,
+    );
+    this.root.style.setProperty("--trf-style", settings.fontStyle);
+    this.root.style.setProperty("--trf-weight", String(settings.textWeight));
+    this.root.style.setProperty(
+      "--trf-case",
+      settings.textCase === "upper" ? "uppercase" : "none",
+    );
+    this.root.style.setProperty("--trf-outline", outlineShadow(settings));
+    this.root.style.setProperty(
+      "--trf-outline-filter",
+      outlineFilter(settings),
+    );
+    this.root.style.setProperty(
+      "--trf-outline-halo",
+      outlineFilter(settings, "halo"),
     );
     this.applyCustomPalette(settings);
 
@@ -321,9 +340,17 @@ export class ReaderOverlay {
     // Monospace lands the pivot exactly using `ch` units; a proportional face
     // needs the glyph measured.
     const mono = isMonospace(this.settings.font);
-    const cssFont = `${(this.settings.fontSize * this.scale).toFixed(2)}px ${
-      FONT_STACKS[this.settings.font]
-    }`;
+    /*
+     * Style and weight belong in the string, not just size and family.
+     *
+     * `pivotOffsetPx` measures with a canvas, and a canvas measures whatever
+     * font it is given. Leaving these out meant a bold or italic proportional
+     * face was measured at regular upright, and the pivot landed off the column
+     * by exactly the difference.
+     */
+    const cssFont = `${this.settings.fontStyle} ${this.settings.textWeight} ${(
+      this.settings.fontSize * this.scale
+    ).toFixed(2)}px ${FONT_STACKS[this.settings.font]}`;
     const spacing = this.settings.letterSpacing;
 
     const offset = mono
@@ -432,6 +459,90 @@ function bionicRun(words: Word[]): Node[] {
     out.push(span);
   });
   return out;
+}
+
+/**
+ * An outline around every glyph, as a `text-shadow`.
+ *
+ * `-webkit-text-stroke` would be the obvious tool and is the wrong one: it
+ * draws the stroke *inside* the glyph, eating into the letterform until heavy
+ * values turn text into a smear. Four offset shadows sit outside it instead,
+ * which is how burned-in captions have always been done.
+ *
+ * This is the single most useful thing for legibility over an arbitrary moving
+ * picture, and it is why a caption with no card behind it can work at all.
+ */
+function outlineShadow(settings: Settings): string {
+  const width = Math.max(0, settings.textOutline);
+  if (width === 0) return "none";
+  const ink = "rgba(0, 0, 0, 0.92)";
+  const steps: string[] = [];
+  // Eight directions rather than four: at 3px and above, corners left visible
+  // gaps that read as a ragged edge rather than an outline.
+  for (const [x, y] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+    [1, 1],
+    [1, -1],
+    [-1, 1],
+    [-1, -1],
+  ]) {
+    steps.push(`${x * width}px ${y * width}px 0 ${ink}`);
+  }
+  // A soft drop under the whole thing, which is what stops the outline reading
+  // as a sticker pasted onto the video.
+  steps.push(`0 ${width}px ${width * 1.6}px rgba(0, 0, 0, 0.45)`);
+  return steps.join(", ");
+}
+
+/**
+ * The same outline, as a filter, for text that has no colour of its own.
+ *
+ * The Pop theme fills its glyphs with a gradient using `background-clip: text`,
+ * which requires `color: transparent` — and a `text-shadow` paints *behind* the
+ * glyph, so it would show straight through the transparent letterform as a
+ * grey ghost rather than an outline around it.
+ *
+ * `drop-shadow` operates on the composited result instead, so it traces the
+ * gradient-filled shape. Four are enough where the shadow version needs eight:
+ * each filter in a chain applies to the output of the one before it, so the
+ * corners are filled by the shadows of the shadows.
+ */
+function outlineFilter(
+  settings: Settings,
+  kind: "plain" | "halo" = "plain",
+): string {
+  const width = Math.max(0, settings.textOutline);
+  if (width === 0) return "none";
+
+  const ring = (size: number, ink: string): string[] => [
+    `drop-shadow(${size}px 0 0 ${ink})`,
+    `drop-shadow(-${size}px 0 0 ${ink})`,
+    `drop-shadow(0 ${size}px 0 ${ink})`,
+    `drop-shadow(0 -${size}px 0 ${ink})`,
+  ];
+
+  const black = "rgba(0, 0, 0, 0.95)";
+  if (kind === "plain") return ring(width, black).join(" ");
+
+  /*
+   * A light ring inside a dark one, which is the look burned-in social captions
+   * have converged on: the pale edge lifts the fill off the picture, and the
+   * dark edge outside it keeps the pale edge itself from vanishing against a
+   * bright frame.
+   *
+   * Chaining works because each filter applies to the *output* of the one
+   * before, so the second ring traces the first rather than the glyph — which
+   * is also why the outer pass only needs to be slightly larger than the inner.
+   */
+  const inner = Math.max(1, Math.round(width * 0.6));
+  return [
+    ...ring(inner, "rgba(255, 255, 255, 0.95)"),
+    ...ring(Math.max(1, Math.round(width * 0.5)), black),
+    `drop-shadow(0 ${width}px ${width * 1.4}px rgba(0, 0, 0, 0.55))`,
+  ].join(" ");
 }
 
 function pivotSpan(char: string): HTMLSpanElement {

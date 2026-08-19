@@ -119,6 +119,41 @@
   --edge: rgba(255, 255, 255, 0.09);
 }
 
+/* The lyric band: gold on translucent blue, the way a burned-in hymn or song
+   line has looked for decades. Warm text on a cool ground is the whole trick —
+   it stays legible over almost any picture without needing to be opaque. */
+.trf-reader[data-theme="lyric"] {
+  --bg: #1e3f5a;
+  --text: #ffd75e;
+  --faded: #b9c9d6;
+  --accent: #ffe9a3;
+  --edge: rgba(255, 230, 150, 0.22);
+}
+
+/* The caption box: white on black, and nothing else. The most legible
+   combination there is, and the reason broadcast captions have never moved on
+   from it. Not pure black or pure white, per the rule the rest of the reader
+   follows. */
+.trf-reader[data-theme="caption"] {
+  --bg: #0b0b0c;
+  --text: #f4f4f2;
+  --faded: #9a9a98;
+  --accent: #f4f4f2;
+  --edge: transparent;
+}
+
+/* Pop: no card, so the outline does the work the background usually does. The
+   gradient is clipped to the text itself, which is why this theme sets a
+   `background` on the words rather than a flat `--text` colour. */
+.trf-reader[data-theme="pop"] {
+  --bg: #0a0a0a;
+  --text: #8ee6ff;
+  --faded: #b9dce6;
+  --accent: #ffffff;
+  /* No border, because there is no card to draw one around. */
+  --edge: transparent;
+}
+
 /* Your own five colours.
    Four of them are pickers; `--edge` is derived from the text colour, so there
    is no way to choose a border that cannot be seen against the background you
@@ -166,9 +201,14 @@
   );
   font-family: var(--trf-font);
   font-size: var(--trf-size);
+  font-style: var(--trf-style, normal);
   letter-spacing: var(--trf-tracking);
   line-height: 1.15;
   white-space: nowrap;
+  /* Set here rather than per mode, so every mode inherits it and none has to
+     remember to. */
+  text-transform: var(--trf-case, none);
+  text-shadow: var(--trf-outline, none);
 }
 
 /* The focal column. Two static marks — they are a fixation guide, so animating
@@ -198,7 +238,7 @@
   top: 50%;
   transform: translate(var(--trf-pivot-offset, 0px), -50%);
   color: var(--text);
-  font-weight: 600;
+  font-weight: var(--trf-weight, 600);
 }
 
 .trf-pivot {
@@ -397,6 +437,47 @@
   position: static;
   transform: none;
   color: var(--text);
+}
+
+/* ── the pop theme's gradient fill ───────────────────────────────────────
+   Last in the file on purpose. These are theme rules that have to beat mode
+   rules, and both are one class plus one attribute plus one class, so the tie
+   is broken by order and nothing else. Moving this block up silently gives the
+   words their mode's flat colour back. */
+
+.trf-reader[data-theme="pop"] .trf-lw,
+.trf-reader[data-theme="pop"] .trf-word,
+.trf-reader[data-theme="pop"] .trf-context {
+  background: linear-gradient(
+    180deg,
+    #e4faff 0%,
+    #9fe4fa 42%,
+    #3aa6dc 78%,
+    #1d7fb8 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Painted behind the glyph, and the glyph has no fill of its own here, so a
+     shadow would show through the letterform instead of tracing it. */
+  text-shadow: none;
+}
+
+/* The outline, moved to a filter for the same reason. On the stage rather than
+   on each word, so one filter covers the whole line. */
+.trf-reader[data-theme="pop"] .trf-stage {
+  text-shadow: none;
+  /* The two-tone ring rather than the plain one: a pale edge against the fill,
+     a dark edge outside it so the pale edge survives a bright frame. */
+  filter: var(--trf-outline-halo, none);
+}
+
+/* No card at all: the gradient and the outline are the entire design, and a
+   border round nothing is just a rectangle. */
+.trf-reader[data-theme="pop"] {
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 /* YouTube's own captions, hidden while the reader is running: leaving both on

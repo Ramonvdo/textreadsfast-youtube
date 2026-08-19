@@ -11,6 +11,7 @@
 
 import { ReaderOverlay } from "../content/overlay";
 import { buildLines } from "../content/lines";
+import { BUILT_IN_PROFILES } from "../profiles";
 import { classify } from "../reader-core/words";
 import {
   DEFAULTS,
@@ -36,6 +37,30 @@ const AT = 5;
 
 /** The same words, chunked the way the static mode actually reads them. */
 const LINES = buildLines(WORDS);
+
+/**
+ * A built-in profile's settings, by id.
+ *
+ * The harness screenshots the profiles people will actually pick, rather than a
+ * separate set of values that can drift from them. If a profile is retuned, the
+ * picture of it changes with it.
+ */
+function BUILT_IN(id: string): Partial<Settings> {
+  const found = BUILT_IN_PROFILES.find((p) => p.id === id);
+  if (!found) throw new Error(`no built-in profile "${id}"`);
+  return found.settings;
+}
+
+/** The line a static profile shows, at its own line length. */
+function staticView(maxWords: number) {
+  const lines = buildLines(WORDS, maxWords);
+  return {
+    key: "line:0",
+    current: lines[0].words[0],
+    previous: [],
+    upcoming: lines[0].words.slice(1),
+  };
+}
 
 function viewAt(index: number) {
   return {
@@ -80,12 +105,7 @@ function panel(caption: string, settings: Partial<Settings>): HTMLElement {
    */
   overlay.render(
     settings.mode === "plain"
-      ? {
-          key: "line:0",
-          current: LINES[0].words[0],
-          previous: [],
-          upcoming: LINES[0].words.slice(1),
-        }
+      ? staticView(settings.lineWords ?? LINES[0].words.length)
       : viewAt(AT),
   );
 
@@ -102,6 +122,18 @@ function panel(caption: string, settings: Partial<Settings>): HTMLElement {
  * one and a dark one exercise the derived `--edge` in both directions.
  */
 const CUSTOM_PANELS: Array<[string, Partial<Settings>]> = [
+  [
+    "Lyric — gold italic on a blue band",
+    { ...BUILT_IN("lyric"), autoScale: false, fontSize: 21 },
+  ],
+  [
+    "Caption Box — white on solid black",
+    { ...BUILT_IN("caption-box"), autoScale: false, fontSize: 26 },
+  ],
+  [
+    "Pop — uppercase, gradient, no card",
+    { ...BUILT_IN("pop"), autoScale: false, fontSize: 36 },
+  ],
   [
     "Custom — cool dark, low opacity",
     {

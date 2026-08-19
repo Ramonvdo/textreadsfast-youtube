@@ -15,6 +15,9 @@ export type ReaderTheme =
   | "slate"
   | "mist"
   | "nocturne"
+  | "lyric"
+  | "caption"
+  | "pop"
   | "custom";
 
 /**
@@ -51,6 +54,9 @@ export const THEME_LABELS: Record<ReaderTheme, string> = {
   slate: "Slate (neutral grey)",
   mist: "Mist (neutral light)",
   nocturne: "Nocturne (deep blue-grey)",
+  lyric: "Lyric (gold on a blue band)",
+  caption: "Caption (white on solid black)",
+  pop: "Pop (cyan gradient, no card)",
   custom: "Custom (your own colours)",
 };
 
@@ -94,6 +100,38 @@ export interface Settings {
   customText: string;
   customFaded: string;
   customAccent: string;
+  /** Italic, for the styles where slanted text is the whole character. */
+  fontStyle: "normal" | "italic";
+  /**
+   * Uppercase the words.
+   *
+   * Applied with `text-transform`, so the DOM text is untouched and the pivot
+   * maths still sees the original characters.
+   */
+  textCase: "none" | "upper";
+  /**
+   * 400-700. Heavy weights read over busy video where 400 disappears.
+   *
+   * Not every family ships every weight -- Geist stops at 600 -- and a weight
+   * that is not there is synthesised by the browser rather than refused, which
+   * looks thinner than the real thing. `fonts.css` is byte-identical to the
+   * desktop app, so adding faces means changing both repositories.
+   */
+  textWeight: number;
+  /**
+   * An outline around every glyph, in pixels.
+   *
+   * The one thing that makes text legible over an arbitrary moving picture,
+   * and the reason captions burned into video almost always have one.
+   */
+  textOutline: number;
+  /**
+   * Words per line in Static mode, before it breaks regardless of punctuation.
+   *
+   * Low values give the short, punchy captions people use on Shorts; high ones
+   * give a full subtitle band.
+   */
+  lineWords: number;
   showPivotGuides: boolean;
   removeFillers: boolean;
   /** Hide YouTube's own captions while the reader is running. Leaving both on
@@ -136,6 +174,11 @@ export const DEFAULTS: Settings = {
   customText: "#e8e6e3",
   customFaded: "#6e7278",
   customAccent: "#e4572e",
+  fontStyle: "normal",
+  textCase: "none",
+  textWeight: 600,
+  textOutline: 0,
+  lineWords: 12,
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,

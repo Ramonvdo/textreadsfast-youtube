@@ -265,8 +265,19 @@ function track(
   let cachedLines: Line[] | null = null;
   // Indices line up with `words` because the map is one-to-one, which is what
   // lets `lineAt` be queried with the index `wordAt` just returned.
-  const lines = (): Line[] =>
-    (cachedLines ??= buildLines(words.map((w) => w.word)));
+  let cachedFor = -1;
+  const lines = (): Line[] => {
+    // Rebuilt when the setting changes, not only when the video does: line
+    // length is a live control and the preview has to follow it.
+    if (!cachedLines || cachedFor !== settings.lineWords) {
+      cachedFor = settings.lineWords;
+      cachedLines = buildLines(
+        words.map((w) => w.word),
+        settings.lineWords,
+      );
+    }
+    return cachedLines;
+  };
 
   const update = (): void => {
     // An ad runs through this same element on its own clock, so the transcript

@@ -151,6 +151,29 @@ shoot` rather than by any test.
   measures this and fails on a width change over 0.6px, because a still
   screenshot cannot show it.
 
+- **The Pop theme's rules live at the end of `reader.css`, and must.** They are
+  theme rules that have to beat mode rules, and both are one class plus one
+  attribute plus one class — the tie is broken by source order and nothing else.
+  Moving that block up silently gives the words their mode's flat colour back.
+
+- **`background-clip: text` and `text-shadow` are incompatible.** A gradient
+  fill needs `color: transparent`, and a text-shadow paints _behind_ the glyph,
+  so it shows through the letterform as a grey ghost rather than outlining it.
+  Pop uses a `drop-shadow` filter chain instead, which composites on the result.
+  Chained filters apply to each other's output, which is how a two-tone ring is
+  built from two passes.
+
+- **Only some weights and no italics are bundled.** Geist stops at 600; a higher
+  weight is synthesised by the browser and reads thinner than a real bold, which
+  is why the Pop profile uses Atkinson (a real 700). There are no italic faces
+  at all, so `fontStyle: italic` is a synthetic slant. `fonts.css` is one of the
+  five drift-checked files, so adding faces means changing the desktop too.
+
+- **The measured pivot font string must carry weight and style.**
+  `pivotOffsetPx` measures with a canvas, and a canvas measures exactly the font
+  it is handed. Omitting them measured a bold or italic proportional face as
+  regular upright, and the pivot landed off the column by the difference.
+
 - **Custom theme colours are written as `--trf-custom-*`**, never as `--bg` and
   friends. A `[data-theme="custom"]` block maps them across, so all eight
   palettes are still defined in one stylesheet rather than half in CSS and half

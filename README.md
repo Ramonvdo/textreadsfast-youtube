@@ -170,7 +170,7 @@ RSVP is the point of the thing, but it is not for everyone or for every video.
 Six modes, all reading the same word stream:
 
 <p align="center">
-  <img src=".github/assets/reading-modes.png" width="820" alt="The six reading modes, plus two custom palettes" />
+  <img src=".github/assets/reading-modes.png" width="820" alt="The six reading modes and the caption styles" />
 </p>
 
 | Mode              | What it does                                                                                                          |
@@ -182,25 +182,41 @@ Six modes, all reading the same word stream:
 | **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.                                  |
 | **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                                                |
 
-Eight palettes, including a **Custom** one with four colour pickers, plus a
-slider for how much of the video shows through the card behind the words.
+Eleven palettes, including a **Custom** one with four colour pickers, plus a
+slider for how much of the video shows through the card behind the words — down
+to none at all, for text that sits directly on the picture.
+
+The typography composes on top of any of them: **slant**, **letter case**,
+**weight**, and an **outline** around every glyph. The outline is the one that
+matters most — a dark edge is what makes text legible over an arbitrary moving
+picture, and it is why a caption with no card behind it can work at all.
+
+> Two honest limits. No italic faces are bundled, so the slant is the browser
+> slanting the upright one — fine on the serifs, less so on the monospaces. And
+> not every family ships every weight (Geist stops at 600), above which the
+> browser thickens it itself and it reads thinner than a real bold. Both are
+> because `src/reader-core/fonts.css` is byte-identical to the desktop app, so
+> adding faces means changing both repositories.
 
 ## Profiles
 
 Click the toolbar icon to switch profile mid-video, which is usually when you
 want to: the right settings depend on what is on screen.
 
-| Profile           | What it is for                                                  |
-| ----------------- | --------------------------------------------------------------- |
-| **Default**       | One word at a fixed point, dark, a little context either side.  |
-| **Peripheral**    | Pinned word, bolded context. Focus and preview at once.         |
-| **Serif Flow**    | A whole line at once, serif on neutral grey. Reads like a page. |
-| **Reading Room**  | Light and warm, for daytime and bright video.                   |
-| **Night Study**   | Bionic on deep blue-grey, for a lecture in the dark.            |
-| **Sprint**        | Large, narrow, almost no context. For 2x and above.             |
-| **Clarity**       | Big, high contrast, letter shapes drawn for low vision.         |
-| **Quiet Caption** | An ordinary subtitle line, dimmed either side. Nothing flashes. |
-| **Highlighter**   | A block on the word being spoken. Holds up at speed.            |
+| Profile           | What it is for                                                          |
+| ----------------- | ----------------------------------------------------------------------- |
+| **Default**       | One word at a fixed point, dark, a little context either side.          |
+| **Peripheral**    | Pinned word, bolded context. Focus and preview at once.                 |
+| **Serif Flow**    | A whole line at once, serif on neutral grey. Reads like a page.         |
+| **Reading Room**  | Light and warm, for daytime and bright video.                           |
+| **Night Study**   | Bionic on deep blue-grey, for a lecture in the dark.                    |
+| **Sprint**        | Large, narrow, almost no context. For 2x and above.                     |
+| **Clarity**       | Big, high contrast, letter shapes drawn for low vision.                 |
+| **Quiet Caption** | An ordinary subtitle line, dimmed either side. Nothing flashes.         |
+| **Highlighter**   | A block on the word being spoken. Holds up at speed.                    |
+| **Lyric**         | Gold italic serif on a translucent blue band, the width of the picture. |
+| **Caption Box**   | White on solid black. The plainest, most legible thing there is.        |
+| **Pop**           | Big uppercase over the picture, no card. Two or three words at a time.  |
 
 Editing any control leaves the change live and marks the profile _modified_ —
 built-ins are never overwritten, so **Default** stays exactly as shipped

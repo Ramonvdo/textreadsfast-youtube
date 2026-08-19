@@ -231,15 +231,67 @@ const FIELDS: Field[] = [
     format: (v) => `${Math.round(v * 100)}%`,
   },
   {
+    kind: "select",
+    key: "fontStyle",
+    group: "appearance",
+    label: "Slant",
+    help: "No italic faces are bundled, so this slants the upright one. It reads well on the serifs and less so on the monospaces.",
+    options: [
+      { value: "normal", label: "Upright" },
+      { value: "italic", label: "Italic" },
+    ],
+  },
+  {
+    kind: "select",
+    key: "textCase",
+    group: "appearance",
+    label: "Letter case",
+    options: [
+      { value: "none", label: "As written" },
+      { value: "upper", label: "UPPERCASE" },
+    ],
+  },
+  {
+    kind: "range",
+    key: "textWeight",
+    group: "appearance",
+    label: "Text weight",
+    help: "Heavier holds up over busy video, where a regular weight disappears into it. Not every face has every weight — Geist stops at 600, and beyond that the browser thickens it itself, which looks thinner than a real bold.",
+    min: 400,
+    max: 700,
+    step: 100,
+  },
+  {
+    kind: "range",
+    key: "textOutline",
+    group: "appearance",
+    label: "Outline",
+    help: "A dark edge around every letter. The single most effective thing for reading over a moving picture, and what lets a caption work with no card behind it at all.",
+    min: 0,
+    max: 4,
+    step: 1,
+    format: (v) => (v === 0 ? "None" : `${v}px`),
+  },
+  {
+    kind: "range",
+    key: "lineWords",
+    group: "reading",
+    label: "Words per line",
+    help: "Static mode only. Low is short and punchy; high gives a full subtitle band. Lines still break early at a sentence.",
+    min: 3,
+    max: 16,
+    step: 1,
+  },
+  {
     kind: "range",
     key: "backgroundOpacity",
     group: "appearance",
     label: "Card opacity",
     help: "How much of the video shows through behind the words. Lower is quieter; too low and the text has to fight the picture.",
-    min: 0.1,
+    min: 0,
     max: 1,
     step: 0.02,
-    format: (v) => `${Math.round(v * 100)}%`,
+    format: (v) => (v === 0 ? "No card" : `${Math.round(v * 100)}%`),
   },
   {
     kind: "toggle",
@@ -403,6 +455,8 @@ function syncDependentControls(): void {
   const staticMode = settings.mode === "plain";
   dim("contextBefore", staticMode);
   dim("contextAfter", staticMode);
+  // The mirror image: line length is what static mode uses instead of them.
+  dim("lineWords", !staticMode);
 }
 
 /** Autoscale sizes the text against the *player*, and the preview is not one —
