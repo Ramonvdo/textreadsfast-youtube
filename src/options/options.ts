@@ -437,6 +437,11 @@ async function mountDevicePrefs(): Promise<void> {
       "Enter read mode as soon as a video with captions loads. Also on the toolbar popup, next to Open read mode.",
     ),
     toggle(
+      "exportTranscript",
+      "Include the transcript in exports",
+      "Append the whole spoken transcript to the end of an exported file. Off by default: it is the largest thing in the file and buries the notes.",
+    ),
+    toggle(
       "statsTracking",
       "Track study stats",
       "Record watch time, coverage and how often you return to a video. Everything stays on this device; turning it off stops the recording, it does not merely hide it.",

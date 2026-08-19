@@ -20,6 +20,7 @@ import type {
   LibraryStats,
   SessionSummary,
 } from "../shared/libraryProtocol";
+import { loadDevicePrefs } from "../settings";
 import {
   formatDuration,
   renderBarChart,
@@ -38,6 +39,8 @@ const count = document.getElementById("count") as HTMLSpanElement;
 
 let sessions: SessionSummary[] = [];
 let granularity: Granularity = "day";
+/** Mirrors the device preference; read once on load. See `settings.ts`. */
+let exportTranscript = false;
 
 /* ── messaging ──────────────────────────────────────────────────────────── */
 
@@ -359,6 +362,9 @@ async function openDetail(videoId: string): Promise<void> {
       channel: session.channel,
       notes: full.notes,
       summary: session.summaryMarkdown,
+      messages: full.messages,
+      transcript: full.transcript?.plainText ?? null,
+      includeTranscript: exportTranscript,
     });
     const blob = new Blob([markdown], {
       type: "text/markdown;charset=utf-8",
@@ -515,6 +521,7 @@ async function main(): Promise<void> {
   }
   if (reply.type !== "list") return;
 
+  exportTranscript = (await loadDevicePrefs()).exportTranscript;
   sessions = reply.sessions;
   paintGrid();
   void paintOverview();

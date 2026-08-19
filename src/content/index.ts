@@ -491,6 +491,7 @@ async function enterOrLeaveReadMode(): Promise<{
       },
     },
     prefs.statsTracking,
+    prefs.exportTranscript,
   );
 
   // The reader travels with the player into read mode for free, because

@@ -108,12 +108,29 @@
         accent-color: var(--page-accent);
       }
 
+      /*
+       * An explicit background, not `transparent`.
+       *
+       * Chrome paints the native dropdown list from the control's computed
+       * background: transparent resolves to a light default while the options
+       * inherit the page's light-on-dark text, so in dark mode the whole list
+       * came out pale grey on white and was effectively unreadable. Naming both
+       * colours — and again on `option`, which some platforms style separately —
+       * is what fixes it.
+       */
       select {
         padding: 6px 8px;
         border-radius: 8px;
         border: 1px solid var(--page-edge);
-        background: transparent;
-        color: inherit;
+        background-color: var(--page-bg);
+        color: var(--page-text);
+        color-scheme: light dark;
+        max-width: 320px;
+      }
+
+      select option {
+        background-color: var(--page-bg);
+        color: var(--page-text);
       }
 
       output {

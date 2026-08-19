@@ -88,6 +88,7 @@ export async function toggleReadMode(
   summaryPrompt: string,
   subtitles: { on: boolean; onChange: (on: boolean) => void },
   trackStats: boolean,
+  exportTranscript: boolean,
 ): Promise<ToggleResult> {
   if (isReadModeOpen()) {
     const closed = await closeReadMode();
@@ -150,6 +151,7 @@ export async function toggleReadMode(
       subtitles: subtitles.on,
       onSubtitlesChange: subtitles.onChange,
       trackStats,
+      exportTranscript,
     },
     summaryPrompt,
   );

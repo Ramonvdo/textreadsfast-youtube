@@ -168,6 +168,18 @@ export interface Exportable {
   notes: Note[];
   /** The assistant's summary, if one has been generated. */
   summary?: string | null;
+  /** The whole conversation. The summary turn is skipped, having its own section. */
+  messages?: ChatMessage[];
+  /** Plain transcript text, included only when `includeTranscript` is set. */
+  transcript?: string | null;
+  /**
+   * Append the full transcript.
+   *
+   * Off unless asked for: a transcript is by far the largest thing here and
+   * would bury the notes in a file people mostly open to reread their own
+   * thinking.
+   */
+  includeTranscript?: boolean;
 }
 
 /**
@@ -201,17 +213,57 @@ export function sessionToMarkdown(input: Exportable): string {
     lines.push("");
   }
 
+  /*
+   * The conversation, minus the summary.
+   *
+   * The summary is the first assistant turn and already has its own section
+   * above; repeating it would open the file with the same paragraph twice. What
+   * is left is the record worth keeping: what was asked, and what came back.
+   */
+  const conversation = (input.messages ?? []).filter(
+    (message) => message.text.trim() !== "",
+  );
+  const firstAssistant = conversation.findIndex((m) => m.role === "assistant");
+  const qa =
+    input.summary && firstAssistant !== -1
+      ? conversation.filter((_, index) => index !== firstAssistant)
+      : conversation;
+
+  if (qa.length > 0) {
+    lines.push("## Video related questions", "");
+    for (const message of qa) {
+      lines.push(
+        message.role === "user" ? "**Q.**" : "**A.**",
+        "",
+        message.text.trim(),
+        "",
+      );
+    }
+  }
+
+  // Last, and only when asked for: it dwarfs everything above it.
+  const transcript = input.transcript?.trim();
+  if (input.includeTranscript && transcript) {
+    lines.push("## Transcript", "", transcript, "");
+  }
+
   return lines.join("\n");
 }
 
 /** For callers holding a whole model; the summary is its first assistant turn. */
-export function notesToMarkdown(model: ReadModeModel): string {
+export function notesToMarkdown(
+  model: ReadModeModel,
+  extra: { transcript?: string | null; includeTranscript?: boolean } = {},
+): string {
   return sessionToMarkdown({
     videoId: model.videoId,
     title: model.title,
     channel: model.channel,
     notes: model.notes,
     summary: model.messages.find((m) => m.role === "assistant")?.text ?? null,
+    messages: model.messages,
+    transcript: extra.transcript ?? null,
+    includeTranscript: extra.includeTranscript,
   });
 }
 

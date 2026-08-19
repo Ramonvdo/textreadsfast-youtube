@@ -142,6 +142,76 @@ describe("notesToMarkdown", () => {
   });
 });
 
+describe("the exported sections", () => {
+  const withChat = () =>
+    model({
+      notes: [{ id: "n", atMs: 1000, text: "a note", createdAt: 1 }],
+      messages: [
+        { id: "a1", role: "assistant", text: "The core idea.", createdAt: 1 },
+        { id: "u1", role: "user", text: "What about pacing?", createdAt: 2 },
+        { id: "a2", role: "assistant", text: "Pace it slowly.", createdAt: 3 },
+      ],
+    });
+
+  it("records the conversation as questions and answers", () => {
+    const md = notesToMarkdown(withChat());
+    expect(md).toContain("## Video related questions");
+    expect(md).toContain("What about pacing?");
+    expect(md).toContain("Pace it slowly.");
+  });
+
+  // The summary already has its own section; repeating it would open the file
+  // with the same paragraph twice.
+  it("does not repeat the summary inside the questions", () => {
+    const md = notesToMarkdown(withChat());
+    const qa = md.slice(md.indexOf("## Video related questions"));
+    expect(qa).not.toContain("The core idea.");
+    expect(md.indexOf("The core idea.")).toBeGreaterThan(-1);
+  });
+
+  it("leaves the section out when nothing was asked", () => {
+    const md = notesToMarkdown(
+      model({
+        messages: [
+          {
+            id: "a1",
+            role: "assistant",
+            text: "Only a summary.",
+            createdAt: 1,
+          },
+        ],
+      }),
+    );
+    expect(md).not.toContain("## Video related questions");
+  });
+
+  // Off by default: the transcript dwarfs everything else in the file.
+  it("omits the transcript unless it is asked for", () => {
+    const plain = notesToMarkdown(model(), { transcript: "every spoken word" });
+    expect(plain).not.toContain("## Transcript");
+
+    const full = notesToMarkdown(model(), {
+      transcript: "every spoken word",
+      includeTranscript: true,
+    });
+    expect(full).toContain("## Transcript");
+    expect(full).toContain("every spoken word");
+  });
+
+  it("keeps the transcript last, after the notes and the questions", () => {
+    const md = notesToMarkdown(withChat(), {
+      transcript: "every spoken word",
+      includeTranscript: true,
+    });
+    expect(md.indexOf("## Notes")).toBeLessThan(
+      md.indexOf("## Video related questions"),
+    );
+    expect(md.indexOf("## Video related questions")).toBeLessThan(
+      md.indexOf("## Transcript"),
+    );
+  });
+});
+
 describe("exportFilename", () => {
   it("strips characters that would break a filesystem", () => {
     expect(exportFilename(model({ title: 'a/b\\c:d*e?f"g<h>i|j' }))).toBe(

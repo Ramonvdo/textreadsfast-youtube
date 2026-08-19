@@ -50,6 +50,8 @@ export interface ReadModeContext {
   subtitles: boolean;
   /** Record watch time, coverage and rewatch counts for this session. */
   trackStats: boolean;
+  /** Append the whole transcript when exporting. */
+  exportTranscript: boolean;
   /** The transcript shaped for the chapter prompt, when one is needed. */
   chapterSeed?: string;
   /** Apply and persist a change to that. Owned by the content script, which is
@@ -175,6 +177,11 @@ function trackPlayhead(video: HTMLVideoElement): () => void {
     window.clearInterval(timer);
     video.removeEventListener("seeked", tick);
   };
+}
+
+interface ExportOptions {
+  transcript: string | null;
+  includeTranscript: boolean;
 }
 
 /* ── study stats ────────────────────────────────────────────────────────── */
@@ -471,7 +478,10 @@ export async function openReadMode(
     },
     onExport: () => {
       if (!session) return;
-      exportNotes(session.model);
+      exportNotes(session.model, {
+        transcript: session.transcript,
+        includeTranscript: ctx.exportTranscript,
+      });
     },
     onToggleSubtitles: (on) => {
       setModel({ subtitles: on });
@@ -609,8 +619,8 @@ async function saveSession(): Promise<void> {
   });
 }
 
-function exportNotes(model: ReadModeModel): void {
-  const blob = new Blob([notesToMarkdown(model)], {
+function exportNotes(model: ReadModeModel, options: ExportOptions): void {
+  const blob = new Blob([notesToMarkdown(model, options)], {
     type: "text/markdown;charset=utf-8",
   });
   const url = URL.createObjectURL(blob);

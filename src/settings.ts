@@ -111,16 +111,22 @@ export interface DevicePrefs {
   statsTracking: boolean;
   /** Enter read mode automatically when a video page loads. */
   autoReadMode: boolean;
+  /** Append the whole transcript to an exported file. */
+  exportTranscript: boolean;
 }
 
 export const DEVICE_DEFAULTS: DevicePrefs = {
   statsTracking: true,
   autoReadMode: false,
+  // Off: a transcript is by far the largest thing in the file and would bury
+  // the notes people mostly open it to reread.
+  exportTranscript: false,
 };
 
 const DEVICE_KEYS = {
   statsTracking: "prefs.statsTracking",
   autoReadMode: "prefs.autoReadMode",
+  exportTranscript: "prefs.exportTranscript",
 } as const;
 
 export async function loadDevicePrefs(): Promise<DevicePrefs> {
@@ -128,10 +134,12 @@ export async function loadDevicePrefs(): Promise<DevicePrefs> {
     const stored = await chrome.storage.local.get({
       [DEVICE_KEYS.statsTracking]: DEVICE_DEFAULTS.statsTracking,
       [DEVICE_KEYS.autoReadMode]: DEVICE_DEFAULTS.autoReadMode,
+      [DEVICE_KEYS.exportTranscript]: DEVICE_DEFAULTS.exportTranscript,
     });
     return {
       statsTracking: Boolean(stored[DEVICE_KEYS.statsTracking]),
       autoReadMode: Boolean(stored[DEVICE_KEYS.autoReadMode]),
+      exportTranscript: Boolean(stored[DEVICE_KEYS.exportTranscript]),
     };
   } catch {
     return { ...DEVICE_DEFAULTS };
