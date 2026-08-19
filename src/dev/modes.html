@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reading modes harness</title>
+    <link rel="stylesheet" href="reader.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #12100e;
+        color: #cfcac2;
+        font-family: "Geist", system-ui, sans-serif;
+      }
+
+      /* The screenshot must not include a scrollbar, or every comparison picks
+         up the platform's scrollbar width instead of the reader. */
+      ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 26px;
+        padding: 26px;
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #8b8379;
+      }
+
+      /*
+       * Stands in for #movie_player.
+       *
+       * The reader mounts inside the player and positions against it, so this
+       * has to be a positioned block of roughly video proportions or every
+       * mode lands somewhere meaningless. The gradient is here so the card's
+       * opacity is judged against something with structure, the way it will be
+       * over an actual picture, rather than against flat grey.
+       */
+      .player {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        border-radius: 10px;
+        overflow: hidden;
+        background:
+          radial-gradient(120% 90% at 22% 18%, #4a5b6b 0%, transparent 60%),
+          linear-gradient(160deg, #2b2f36 0%, #16181b 100%);
+      }
+
+      /* Measured, never looked at. Off to the side rather than hidden, because
+         a display:none element has no layout and every width would be zero. */
+      .probe {
+        position: absolute;
+        left: -3000px;
+        top: 0;
+        width: 900px;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="modes.js"></script>
+  </body>
+</html>

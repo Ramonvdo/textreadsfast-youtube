@@ -31,7 +31,7 @@ const entries = {
   background: "src/background/index.ts",
   library: "src/library/library.ts",
   keysetup: "src/keysetup/keysetup.ts",
-  ...(dev ? { harness: "src/dev/harness.ts" } : {}),
+  ...(dev ? { harness: "src/dev/harness.ts", modes: "src/dev/modes.ts" } : {}),
 };
 
 /** The font stylesheet ships as-is, but its `url()`s must resolve against the
@@ -103,6 +103,11 @@ async function copyStatic() {
     await cp(
       resolve(root, "src/dev/harness.html"),
       resolve(outdir, "harness.html"),
+    );
+    // The reader's own harness: every reading mode over a stand-in player.
+    await cp(
+      resolve(root, "src/dev/modes.html"),
+      resolve(outdir, "modes.html"),
     );
     await cp(resolve(root, "src/dev/fixtures"), resolve(outdir, "fixtures"), {
       recursive: true,

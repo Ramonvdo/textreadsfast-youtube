@@ -133,6 +133,38 @@
         color: var(--page-text);
       }
 
+      /* A swatch, not a form field. Chrome draws a native colour input as a
+         bordered button with the colour inset; stripping the chrome and letting
+         the colour reach the edges makes it read as the thing it sets. */
+      input[type="color"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 44px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid var(--page-edge);
+        border-radius: 8px;
+        background: none;
+        cursor: pointer;
+      }
+
+      input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 2px;
+      }
+
+      input[type="color"]::-webkit-color-swatch {
+        border: none;
+        border-radius: 6px;
+      }
+
+      /* The hex, beside the swatch. Uppercase so it reads as a code rather than
+         as a word, and monospaced so it does not reflow as the colour changes. */
+      .row[data-field^="custom"] output {
+        font-family: "Geist Mono", ui-monospace, monospace;
+        text-transform: uppercase;
+        min-width: 8ch;
+      }
+
       output {
         font-variant-numeric: tabular-nums;
         font-size: 13px;

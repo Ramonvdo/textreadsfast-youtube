@@ -21,7 +21,11 @@ import { FONT_LABELS, type ReaderFont } from "../reader-core/fonts";
 import {
   DEFAULTS,
   loadSettings,
+  MODE_LABELS,
   saveSettings,
+  THEME_LABELS,
+  type ReaderTheme,
+  type ReadingMode,
   type Settings,
 } from "../settings";
 
@@ -56,7 +60,19 @@ interface RangeField extends BaseField {
   format?: (value: number) => string;
 }
 
-type Field = ToggleField | SelectField | RangeField;
+interface ColorField extends BaseField {
+  kind: "color";
+}
+
+type Field = ToggleField | SelectField | RangeField | ColorField;
+
+/** The colours that only mean anything under the Custom theme. */
+const CUSTOM_COLOR_KEYS = [
+  "customBackground",
+  "customText",
+  "customFaded",
+  "customAccent",
+] as const;
 
 const FIELDS: Field[] = [
   {
@@ -71,11 +87,13 @@ const FIELDS: Field[] = [
     key: "mode",
     group: "reading",
     label: "Reading mode",
-    help: "RSVP shows one word at a fixed focal point. Bionic shows a sliding window with the leading letters emphasised.",
-    options: [
-      { value: "rsvp", label: "RSVP (one word)" },
-      { value: "bionic", label: "Bionic (sliding window)" },
-    ],
+    help: "RSVP pins one word to a fixed focal point. The rest show a line and mark where the speaker is in it.",
+    // Derived from the union rather than listed, so a mode added to `Settings`
+    // and forgotten here fails to build instead of never reaching the picker.
+    options: (Object.keys(MODE_LABELS) as ReadingMode[]).map((value) => ({
+      value,
+      label: MODE_LABELS[value],
+    })),
   },
   {
     kind: "range",
@@ -109,16 +127,37 @@ const FIELDS: Field[] = [
     key: "theme",
     group: "appearance",
     label: "Theme",
-    help: "None use pure black or pure white — that contrast is what causes eye strain over a long session.",
-    options: [
-      { value: "focus", label: "Focus (dark)" },
-      { value: "paper", label: "Paper (light)" },
-      { value: "sepia", label: "Sepia" },
-      { value: "contrast", label: "High contrast" },
-      { value: "slate", label: "Slate (neutral grey)" },
-      { value: "mist", label: "Mist (neutral light)" },
-      { value: "nocturne", label: "Nocturne (deep blue-grey)" },
-    ],
+    help: "None of the built-in palettes use pure black or pure white — that contrast is what causes eye strain over a long session. Custom uses the four colours below.",
+    options: (Object.keys(THEME_LABELS) as ReaderTheme[]).map((value) => ({
+      value,
+      label: THEME_LABELS[value],
+    })),
+  },
+  {
+    kind: "color",
+    key: "customBackground",
+    group: "appearance",
+    label: "Custom: background",
+    help: "Used by the Custom theme. Picking any of these four switches to it.",
+  },
+  {
+    kind: "color",
+    key: "customText",
+    group: "appearance",
+    label: "Custom: current word",
+  },
+  {
+    kind: "color",
+    key: "customFaded",
+    group: "appearance",
+    label: "Custom: surrounding words",
+  },
+  {
+    kind: "color",
+    key: "customAccent",
+    group: "appearance",
+    label: "Custom: accent",
+    help: "The pivot letter, the focal marks, and the highlighter block.",
   },
   {
     kind: "select",
@@ -192,6 +231,24 @@ const FIELDS: Field[] = [
     format: (v) => `${Math.round(v * 100)}%`,
   },
   {
+    kind: "range",
+    key: "backgroundOpacity",
+    group: "appearance",
+    label: "Card opacity",
+    help: "How much of the video shows through behind the words. Lower is quieter; too low and the text has to fight the picture.",
+    min: 0.1,
+    max: 1,
+    step: 0.02,
+    format: (v) => `${Math.round(v * 100)}%`,
+  },
+  {
+    kind: "toggle",
+    key: "bionicAccent",
+    group: "reading",
+    label: "Colour the bold letters",
+    help: "Bionic only. Off leaves the emphasis carried by weight alone, which is the calmer version of the mode.",
+  },
+  {
     kind: "toggle",
     key: "removeFillers",
     group: "captions",
@@ -236,6 +293,9 @@ let previewIndex = 0;
 function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "row";
+  // Read back by `syncDependentControls`, which dims the rows that do not
+  // currently decide anything.
+  wrapper.dataset.field = String(field.key);
 
   const text = document.createElement("div");
   const label = document.createElement("label");
@@ -269,7 +329,21 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
     select.addEventListener("change", () => onChange(select.value));
     label.htmlFor = select.id = `f-${String(field.key)}`;
     control.append(select);
-  } else {
+  } else if (field.kind === "color") {
+    const input = document.createElement("input");
+    input.type = "color";
+    input.value = String(settings[field.key]);
+    const output = document.createElement("output");
+    output.textContent = input.value;
+    // `input`, not `change`: a colour picker streams while it is dragged, which
+    // is what makes the preview worth having. `update` debounces the write.
+    input.addEventListener("input", () => {
+      output.textContent = input.value;
+      onChange(input.value);
+    });
+    label.htmlFor = input.id = `f-${String(field.key)}`;
+    control.append(input, output);
+  } else if (field.kind === "range") {
     const input = document.createElement("input");
     input.type = "range";
     input.min = String(field.min);
@@ -286,10 +360,44 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
     });
     label.htmlFor = input.id = `f-${String(field.key)}`;
     control.append(input, output);
+  } else {
+    /*
+     * A field kind with no branch is a build error rather than a control that
+     * renders as something else. This chain used to end in a bare `else` that
+     * was the range branch, so adding a kind produced a broken slider.
+     */
+    const unhandled: never = field;
+    throw new Error(`unhandled field kind: ${JSON.stringify(unhandled)}`);
   }
 
   wrapper.append(text, control);
   return wrapper;
+}
+
+/**
+ * Keep the controls that depend on other controls honest.
+ *
+ * Two rows only mean something in one mode or theme. Rather than hiding them —
+ * which makes them impossible to find — they are dimmed, the same treatment the
+ * export-folder row gets when the save dialog is on.
+ */
+function syncDependentControls(): void {
+  const theme = document.getElementById("f-theme");
+  if (theme instanceof HTMLSelectElement && theme.value !== settings.theme) {
+    // Picking a colour switches the theme for you, so the select has to follow
+    // without rebuilding the row the pointer is currently inside.
+    theme.value = settings.theme;
+  }
+
+  const dim = (key: string, inactive: boolean): void => {
+    const row = document.querySelector<HTMLElement>(
+      `.row[data-field="${key}"]`,
+    );
+    if (row) row.dataset.inactive = String(inactive);
+  };
+
+  for (const key of CUSTOM_COLOR_KEYS) dim(key, settings.theme !== "custom");
+  dim("bionicAccent", settings.mode !== "bionic");
 }
 
 /** Autoscale sizes the text against the *player*, and the preview is not one —
@@ -330,6 +438,18 @@ function flushSave(): Promise<void> {
 window.addEventListener("pagehide", () => void flushSave());
 
 function update(patch: Partial<Settings>): void {
+  /*
+   * Touching a custom colour selects the Custom theme.
+   *
+   * Otherwise the four pickers do nothing at all until you separately find the
+   * theme dropdown and change it — which reads as four broken controls rather
+   * than as a theme you have not switched to yet.
+   */
+  const touchedPalette = CUSTOM_COLOR_KEYS.some((key) => key in patch);
+  if (touchedPalette && settings.theme !== "custom") {
+    patch = { ...patch, theme: "custom" };
+  }
+
   settings = { ...settings, ...patch };
   queueSave(patch);
   overlay?.apply(previewSettings(settings));
@@ -337,6 +457,7 @@ function update(patch: Partial<Settings>): void {
   // has to hear about every edit — not only about profile switches. Repaints
   // from what it already holds; it does not re-read storage per frame.
   profileBar?.repaint();
+  syncDependentControls();
 }
 
 /** Rebuild every control from `settings`. Cheaper to reason about than patching
@@ -354,6 +475,7 @@ function renderFields(): void {
       );
     }
   }
+  syncDependentControls();
 }
 
 /** Advance the preview at a readable, fixed pace. There is no queue to react to

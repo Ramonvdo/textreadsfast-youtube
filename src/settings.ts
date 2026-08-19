@@ -8,8 +8,51 @@
 import type { ReaderFont } from "./reader-core/fonts";
 
 export type ReaderTheme =
-  "focus" | "paper" | "sepia" | "contrast" | "slate" | "mist" | "nocturne";
-export type ReadingMode = "rsvp" | "bionic";
+  | "focus"
+  | "paper"
+  | "sepia"
+  | "contrast"
+  | "slate"
+  | "mist"
+  | "nocturne"
+  | "custom";
+
+/**
+ * How the words are put on screen.
+ *
+ * `focusline` rather than `focus`, which is already a theme. Two unions with a
+ * shared member name is how `settings.theme === "focus"` gets written where
+ * `settings.mode` was meant, and the compiler would accept it.
+ */
+export type ReadingMode =
+  "rsvp" | "bionic" | "plain" | "highlight" | "karaoke" | "focusline";
+
+/**
+ * What each mode is called on the settings page.
+ *
+ * A record keyed by the union rather than a hand-written list, mirroring
+ * `FONT_LABELS`: a mode added to the type and forgotten here fails to build
+ * instead of quietly never appearing in the picker.
+ */
+export const MODE_LABELS: Record<ReadingMode, string> = {
+  rsvp: "RSVP — one word at a fixed point",
+  bionic: "Bionic — bold leading letters",
+  plain: "Plain — a quiet caption line",
+  highlight: "Highlighter — a block on the current word",
+  karaoke: "Karaoke — the line fills as it is spoken",
+  focusline: "Focus line — one word, plainly centred",
+};
+
+export const THEME_LABELS: Record<ReaderTheme, string> = {
+  focus: "Focus (dark)",
+  paper: "Paper (light)",
+  sepia: "Sepia",
+  contrast: "High contrast",
+  slate: "Slate (neutral grey)",
+  mist: "Mist (neutral light)",
+  nocturne: "Nocturne (deep blue-grey)",
+  custom: "Custom (your own colours)",
+};
 
 export interface Settings {
   /** Master switch, so the extension can be left installed but idle. */
@@ -30,6 +73,27 @@ export interface Settings {
   /** Upcoming words shown to the right of the pivot. */
   contextAfter: number;
   contextOpacity: number;
+  /**
+   * Colour the bold prefix in Bionic mode.
+   *
+   * The one rule that makes Bionic loud. Off leaves the emphasis carried by
+   * weight alone, which is what people asking for a calmer Bionic mean.
+   */
+  bionicAccent: boolean;
+  /** How opaque the card behind the words is, 0-1. */
+  backgroundOpacity: number;
+  /**
+   * The Custom theme's palette, as hex.
+   *
+   * Four flat strings rather than one object: `isModified` in `profiles.ts`
+   * compares profile values with `!==`, so a nested object would never equal
+   * itself and every profile would read as modified the moment it was applied.
+   * Ignored unless `theme` is `"custom"`.
+   */
+  customBackground: string;
+  customText: string;
+  customFaded: string;
+  customAccent: string;
   showPivotGuides: boolean;
   removeFillers: boolean;
   /** Hide YouTube's own captions while the reader is running. Leaving both on
@@ -62,6 +126,16 @@ export const DEFAULTS: Settings = {
   contextBefore: 3,
   contextAfter: 3,
   contextOpacity: 0.34,
+  bionicAccent: true,
+  // Matches what `reader.css` used to hardcode, so nothing moves for anyone
+  // already using the extension.
+  backgroundOpacity: 0.88,
+  // The Focus palette, so opening the pickers starts from what is on screen
+  // rather than from an arbitrary colour.
+  customBackground: "#16181b",
+  customText: "#e8e6e3",
+  customFaded: "#6e7278",
+  customAccent: "#e4572e",
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,

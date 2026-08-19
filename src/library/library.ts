@@ -210,10 +210,40 @@ async function paintOverview(): Promise<void> {
       el("p", "muted", "Nothing recorded yet. Watch a video in read mode."),
     );
   } else {
-    panel.appendChild(renderBarChart(bars));
+    mountBarChart(panel, bars);
   }
 
   host.appendChild(panel);
+}
+
+/**
+ * A bar chart sized to the space it is actually given.
+ *
+ * The SVG is drawn at its real pixel width so nothing is scaled — see the note
+ * on `svg()` in `charts.ts` for what happens otherwise. Measuring needs the
+ * holder to be in the document, which it is not when a panel is being built, so
+ * the first draw uses a floor and the observer corrects it on the frame after
+ * mount.
+ */
+function mountBarChart(panel: HTMLElement, bars: Bar[], height = 96): void {
+  const holder = el("div", "chart-holder");
+  panel.appendChild(holder);
+
+  // Redrawing only on a real width change is what keeps the observer from
+  // feeding itself: replacing the SVG is a layout change inside the very
+  // element being observed.
+  let lastWidth = -1;
+  const draw = (): void => {
+    const width = Math.max(240, Math.round(holder.clientWidth));
+    if (width === lastWidth) return;
+    lastWidth = width;
+    holder.replaceChildren(renderBarChart(bars, height, width));
+  };
+
+  draw();
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(draw).observe(holder);
+  }
 }
 
 /* ── the grid ───────────────────────────────────────────────────────────── */
@@ -455,7 +485,7 @@ async function openDetail(videoId: string): Promise<void> {
   ) {
     const panel = el("section", "chart-panel");
     panel.appendChild(el("h3", undefined, "Sessions by day"));
-    panel.appendChild(renderBarChart(toBars(perVideo.stats, "day"), 72));
+    mountBarChart(panel, toBars(perVideo.stats, "day"), 72);
     statsBlock.appendChild(panel);
   }
 

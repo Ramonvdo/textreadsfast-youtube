@@ -43,6 +43,12 @@ const PROFILE_FIELDS: Record<keyof ProfileSettings, true> = {
   contextBefore: true,
   contextAfter: true,
   contextOpacity: true,
+  bionicAccent: true,
+  backgroundOpacity: true,
+  customBackground: true,
+  customText: true,
+  customFaded: true,
+  customAccent: true,
   showPivotGuides: true,
   removeFillers: true,
   hideNativeCaptions: true,
@@ -73,6 +79,27 @@ function only(settings: Settings | ProfileSettings): ProfileSettings {
   }
   return out as ProfileSettings;
 }
+
+/**
+ * The Custom theme's colours, for the profiles that do not use it.
+ *
+ * All four are profile fields, so a profile that omitted them would leave the
+ * previous profile's palette behind on switching — which only shows up once
+ * someone has actually built a custom theme, and reads as a ghost. Spread from
+ * one place rather than restated seven times, where four hex codes that mean
+ * nothing would look like they meant something.
+ */
+type Palette = Pick<
+  ProfileSettings,
+  "customBackground" | "customText" | "customFaded" | "customAccent"
+>;
+
+const UNUSED_PALETTE: Palette = {
+  customBackground: DEFAULTS.customBackground,
+  customText: DEFAULTS.customText,
+  customFaded: DEFAULTS.customFaded,
+  customAccent: DEFAULTS.customAccent,
+};
 
 /* ── the built-ins ──────────────────────────────────────────────────────── */
 
@@ -106,6 +133,9 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       // Bionic asks you to read the whole window, not just fixate one word, so
       // the surrounding words are nearly as present as the current one.
       contextOpacity: 0.82,
+      bionicAccent: true,
+      backgroundOpacity: 0.88,
+      ...UNUSED_PALETTE,
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -129,6 +159,9 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       contextBefore: 2,
       contextAfter: 4,
       contextOpacity: 0.4,
+      bionicAccent: true,
+      backgroundOpacity: 0.88,
+      ...UNUSED_PALETTE,
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -152,6 +185,9 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       contextBefore: 4,
       contextAfter: 4,
       contextOpacity: 0.78,
+      bionicAccent: true,
+      backgroundOpacity: 0.88,
+      ...UNUSED_PALETTE,
       showPivotGuides: false,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -177,6 +213,9 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       contextBefore: 0,
       contextAfter: 1,
       contextOpacity: 0.22,
+      bionicAccent: true,
+      backgroundOpacity: 0.88,
+      ...UNUSED_PALETTE,
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
@@ -200,10 +239,102 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       contextBefore: 1,
       contextAfter: 2,
       contextOpacity: 0.55,
+      bionicAccent: true,
+      backgroundOpacity: 0.88,
+      ...UNUSED_PALETTE,
       showPivotGuides: true,
       removeFillers: true,
       hideNativeCaptions: true,
       readerInReadMode: true,
+    },
+  },
+  {
+    id: "quiet-caption",
+    name: "Quiet Caption",
+    blurb: "An ordinary subtitle line, dimmed either side. Nothing flashes.",
+    builtIn: true,
+    settings: {
+      mode: "plain",
+      theme: "focus",
+      font: "literata",
+      fontSize: 26,
+      letterSpacing: 0,
+      autoScale: true,
+      verticalPosition: 8,
+      boxWidth: 78,
+      // Wide window and a mild fade: this mode is for reading the sentence,
+      // not for fixating one word in it.
+      contextBefore: 4,
+      contextAfter: 5,
+      contextOpacity: 0.48,
+      bionicAccent: true,
+      // Barely a card at all, so the words read as part of the picture rather
+      // than as a panel sitting on top of it.
+      backgroundOpacity: 0.42,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
+    },
+  },
+  {
+    id: "highlighter",
+    name: "Highlighter",
+    blurb: "A block on the word being spoken. Holds up at speed.",
+    builtIn: true,
+    settings: {
+      mode: "highlight",
+      theme: "contrast",
+      font: "geist_mono",
+      fontSize: 27,
+      letterSpacing: 0,
+      autoScale: true,
+      verticalPosition: 10,
+      boxWidth: 74,
+      contextBefore: 3,
+      contextAfter: 4,
+      // Brighter than most: the block is doing the work of marking position,
+      // so the words around it do not also need to be faint.
+      contextOpacity: 0.62,
+      bionicAccent: true,
+      backgroundOpacity: 0.55,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
+    },
+  },
+  {
+    id: "karaoke",
+    name: "Karaoke",
+    blurb:
+      "The line fills in as it is spoken. No emphasis, just a moving edge.",
+    builtIn: true,
+    settings: {
+      mode: "karaoke",
+      theme: "nocturne",
+      font: "source_serif",
+      fontSize: 27,
+      letterSpacing: 0,
+      autoScale: true,
+      verticalPosition: 9,
+      boxWidth: 82,
+      // Symmetric and generous. The boundary between spoken and unspoken is
+      // the only signal, so there has to be enough of both to see it move.
+      contextBefore: 5,
+      contextAfter: 5,
+      // Low, because here the fade *is* the mechanism rather than a way of
+      // keeping neighbours out of the way.
+      contextOpacity: 0.26,
+      bionicAccent: true,
+      backgroundOpacity: 0.74,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      ...UNUSED_PALETTE,
     },
   },
 ];

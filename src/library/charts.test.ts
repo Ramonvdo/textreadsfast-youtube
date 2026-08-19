@@ -1,5 +1,13 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { formatDuration, layoutBars, runsOf } from "./charts";
+import {
+  formatDuration,
+  layoutBars,
+  renderBarChart,
+  renderCoverageBar,
+  runsOf,
+  type Bar,
+} from "./charts";
 
 describe("layoutBars", () => {
   const options = { width: 100, height: 50, bottomGutter: 10, gap: 0 };
@@ -97,5 +105,50 @@ describe("runsOf", () => {
     expect(runsOf(new Uint8Array([0, 1, 0]))).toEqual([
       { start: 1, length: 1 },
     ]);
+  });
+});
+
+/*
+ * THE BUG THESE ASSERTIONS EXIST FOR: every chart was drawn into a fixed
+ * 320-unit viewBox at `width: 100%` with `preserveAspectRatio="none"`. In a
+ * panel three times that wide, glyphs were scaled 3.4x horizontally and 1x
+ * vertically — "Wed" arrived as an unreadable smear. Nothing in this file
+ * asserted a single SVG attribute, which is why it shipped.
+ */
+describe("chart geometry on the page", () => {
+  const bars: Bar[] = [
+    { key: "2026-08-17", value: 600_000, label: "We" },
+    { key: "2026-08-18", value: 900_000, label: "Th" },
+    { key: "2026-08-19", value: 300_000, label: "Fr" },
+  ];
+
+  it("draws the bar chart at the width it is given", () => {
+    const node = renderBarChart(bars, 96, 1080);
+    expect(node.getAttribute("viewBox")).toBe("0 0 1080 96");
+    // Absent, so the browser's default `meet` applies and the scale stays 1:1.
+    expect(node.getAttribute("preserveAspectRatio")).toBeNull();
+  });
+
+  it("keeps the default width for a caller that does not measure", () => {
+    expect(renderBarChart(bars).getAttribute("viewBox")).toBe("0 0 320 96");
+  });
+
+  it("places labels inside the box at every width", () => {
+    for (const width of [320, 640, 1080]) {
+      const node = renderBarChart(bars, 96, width);
+      const labels = Array.from(node.querySelectorAll("text"));
+      expect(labels.length).toBeGreaterThan(0);
+      for (const label of labels) {
+        const x = Number(label.getAttribute("x"));
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x).toBeLessThanOrEqual(width);
+      }
+    }
+  });
+
+  // The one chart that genuinely wants to stretch: rectangles only, no text.
+  it("still stretches the coverage strip", () => {
+    const node = renderCoverageBar([1, 1, 0, 1]);
+    expect(node.getAttribute("preserveAspectRatio")).toBe("none");
   });
 });

@@ -144,6 +144,9 @@ export class ReaderOverlay {
     const stack = FONT_STACKS[settings.font];
     this.root.dataset.theme = settings.theme;
     this.root.dataset.mode = settings.mode;
+    // Read by one CSS rule rather than by TypeScript, so Bionic's accent is
+    // still a stylesheet decision and not a colour computed in two places.
+    this.root.dataset.bionicAccent = String(settings.bionicAccent);
     this.root.style.setProperty("--trf-font", stack);
     this.root.style.setProperty(
       "--trf-tracking",
@@ -160,6 +163,14 @@ export class ReaderOverlay {
       `${settings.verticalPosition}%`,
     );
     this.root.style.setProperty("--trf-width", `${settings.boxWidth}%`);
+    // A percentage, because `color-mix` wants one. Clamped here rather than
+    // trusting storage, which can hold anything a previous version wrote.
+    const opacity = Math.min(1, Math.max(0, settings.backgroundOpacity));
+    this.root.style.setProperty(
+      "--trf-bg-opacity",
+      `${(opacity * 100).toFixed(1)}%`,
+    );
+    this.applyCustomPalette(settings);
 
     this.guideTop.style.display = settings.showPivotGuides ? "" : "none";
     this.guideBottom.style.display = settings.showPivotGuides ? "" : "none";
@@ -218,11 +229,60 @@ export class ReaderOverlay {
     this.root.classList.remove("trf-idle");
     this.root.classList.remove("trf-hidden");
 
-    if (this.settings.mode === "bionic") {
-      this.renderBionic(view);
-      return;
+    switch (this.settings.mode) {
+      case "rsvp":
+        this.renderRsvp(view);
+        return;
+      case "focusline":
+        this.renderSingle(view);
+        return;
+      case "bionic":
+      case "plain":
+      case "highlight":
+      case "karaoke":
+        this.renderLine(view, this.settings.mode === "bionic");
+        return;
+      default: {
+        /*
+         * A mode in the union with no branch here is a build error, not a
+         * surprise on screen. The previous shape of this was an if/else whose
+         * `else` was RSVP, so a new mode compiled and silently rendered as
+         * something else entirely.
+         *
+         * At runtime it still falls back rather than throwing: settings sync
+         * between browsers, so a newer version of the extension on another
+         * machine can legitimately hand this one a mode it has never heard of.
+         */
+        const unhandled: never = this.settings.mode;
+        void unhandled;
+        this.renderRsvp(view);
+      }
     }
-    this.renderRsvp(view);
+  }
+
+  /**
+   * The Custom theme's five properties.
+   *
+   * Written as `--trf-custom-*` and mapped across by a `[data-theme="custom"]`
+   * block, rather than writing `--bg` and friends directly: every other theme
+   * is defined entirely in the stylesheet, and a palette assembled half in CSS
+   * and half in TypeScript is the kind of split that drifts. Cleared for every
+   * other theme so a stale colour cannot leak into one.
+   */
+  private applyCustomPalette(settings: Settings): void {
+    const palette: Record<string, string> = {
+      "--trf-custom-bg": settings.customBackground,
+      "--trf-custom-text": settings.customText,
+      "--trf-custom-faded": settings.customFaded,
+      "--trf-custom-accent": settings.customAccent,
+    };
+    for (const [name, value] of Object.entries(palette)) {
+      if (settings.theme === "custom" && value) {
+        this.root.style.setProperty(name, value);
+      } else {
+        this.root.style.removeProperty(name);
+      }
+    }
   }
 
   private renderRsvp(view: ReaderView): void {
@@ -262,7 +322,16 @@ export class ReaderOverlay {
     this.afterEl.textContent = view.upcoming.map((w) => w.text).join(" ");
   }
 
-  private renderBionic(view: ReaderView): void {
+  /**
+   * One line of words, with the current one marked.
+   *
+   * Shared by every mode that reads as a sentence — Bionic, Plain, Highlighter
+   * and Karaoke differ only in how the current word is distinguished, and that
+   * is a stylesheet question. Each word gets its position as a class and the
+   * mode decides what to do with it, which is why adding a fifth line mode is a
+   * CSS block rather than a fifth copy of this loop.
+   */
+  private renderLine(view: ReaderView, bionic: boolean): void {
     const words = [...view.previous, view.current!, ...view.upcoming];
     const currentIndex = view.previous.length;
 
@@ -271,19 +340,43 @@ export class ReaderOverlay {
 
     this.wordEl.replaceChildren(
       ...words.map((word, index) => {
-        const chars = [...word.text];
-        const lead = Math.max(1, Math.round(chars.length * BIONIC_LEAD));
         const span = document.createElement("span");
-        span.className =
+        const position =
           index === currentIndex
-            ? "trf-bionic trf-bionic--current"
-            : "trf-bionic";
-        const bold = document.createElement("b");
-        bold.textContent = chars.slice(0, lead).join("");
-        span.append(bold, document.createTextNode(chars.slice(lead).join("")));
+            ? "current"
+            : index < currentIndex
+              ? "past"
+              : "future";
+        span.className = `trf-lw trf-lw--${position}`;
+
+        if (bionic) {
+          const chars = [...word.text];
+          const lead = Math.max(1, Math.round(chars.length * BIONIC_LEAD));
+          const bold = document.createElement("b");
+          bold.textContent = chars.slice(0, lead).join("");
+          span.append(
+            bold,
+            document.createTextNode(chars.slice(lead).join("")),
+          );
+        } else {
+          span.textContent = word.text;
+        }
         return span;
       }),
     );
+  }
+
+  /**
+   * One word, centred.
+   *
+   * RSVP without the pivot: the same word-at-a-time rhythm for people who find
+   * a coloured letter mid-word distracting rather than helpful. No offset is
+   * set, so the word is centred by the stage's own flexbox.
+   */
+  private renderSingle(view: ReaderView): void {
+    this.beforeEl.textContent = "";
+    this.afterEl.textContent = "";
+    this.wordEl.replaceChildren(document.createTextNode(view.current!.text));
   }
 }
 

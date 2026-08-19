@@ -111,12 +111,24 @@ export function shortDayLabel(key: string): string {
   return date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2);
 }
 
-function svg(width: number, height: number): SVGSVGElement {
+/**
+ * @param stretch Let the viewBox be scaled to fit, distorting it.
+ *
+ * THE BUG THIS PARAMETER EXISTS FOR: every chart used to be drawn into a fixed
+ * 320-unit viewBox at `width: 100%` with `preserveAspectRatio="none"`. In a
+ * 1080px panel that is 3.4x horizontally and 1x vertically, which rectangles
+ * survive and glyphs do not — "Wed" came out as a smeared, unreadable "We".
+ *
+ * Anything with text in it must therefore be rendered at its real pixel width,
+ * so the scale is 1:1 and a letter is the shape the font drew. Only the
+ * coverage strip, which is nothing but rectangles, genuinely wants to stretch.
+ */
+function svg(width: number, height: number, stretch: boolean): SVGSVGElement {
   const node = document.createElementNS(NS, "svg");
   node.setAttribute("viewBox", `0 0 ${width} ${height}`);
   node.setAttribute("width", "100%");
   node.setAttribute("height", String(height));
-  node.setAttribute("preserveAspectRatio", "none");
+  if (stretch) node.setAttribute("preserveAspectRatio", "none");
   node.setAttribute("role", "img");
   return node;
 }
@@ -139,9 +151,12 @@ function rect(geometry: BarGeometry, className: string): SVGRectElement {
  * read is decoration. Hover shows a value through a native `<title>`, which
  * needs no positioning code and works on touch.
  */
-export function renderBarChart(bars: Bar[], height = 96): SVGSVGElement {
-  const width = 320;
-  const node = svg(width, height);
+export function renderBarChart(
+  bars: Bar[],
+  height = 96,
+  width = 320,
+): SVGSVGElement {
+  const node = svg(width, height, false);
 
   const total = bars.reduce((sum, bar) => sum + bar.value, 0);
   node.setAttribute(
@@ -199,7 +214,7 @@ export function renderCoverageBar(
 ): SVGSVGElement {
   const buckets = Array.from(coverage);
   const width = 320;
-  const node = svg(width, height);
+  const node = svg(width, height, true);
 
   const seen = buckets.filter(Boolean).length;
   const pct =

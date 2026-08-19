@@ -28,7 +28,11 @@
   padding: 14px 20px;
   box-sizing: border-box;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--bg) var(--trf-bg-opacity, 88%),
+    transparent
+  );
   border: 1px solid var(--edge);
   box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(3px);
@@ -87,6 +91,19 @@
   --faded: #6f7a88;
   --accent: #e0714a;
   --edge: rgba(255, 255, 255, 0.09);
+}
+
+/* Your own five colours.
+   Four of them are pickers; `--edge` is derived from the text colour, so there
+   is no way to choose a border that cannot be seen against the background you
+   just chose. The fallbacks are the Focus palette, which is what shows if the
+   overlay is ever mounted before `apply` has run. */
+.trf-reader[data-theme="custom"] {
+  --bg: var(--trf-custom-bg, #16181b);
+  --text: var(--trf-custom-text, #e8e6e3);
+  --faded: var(--trf-custom-faded, #6e7278);
+  --accent: var(--trf-custom-accent, #e4572e);
+  --edge: color-mix(in srgb, var(--trf-custom-text, #e8e6e3) 14%, transparent);
 }
 
 /* Between cues, or paused. Recede rather than disappear, so the reader keeps
@@ -186,44 +203,128 @@
   text-align: left;
 }
 
-/* ── bionic mode ── */
+/* ── line modes ──────────────────────────────────────────────────────────
+   Bionic, Plain, Highlighter and Karaoke are one line of words that differ
+   only in how the current word is marked. They share a renderer and this
+   block; each mode then adds the one rule that makes it itself. */
 
-.trf-reader[data-mode="bionic"] .trf-word {
+.trf-reader[data-mode="bionic"] .trf-word,
+.trf-reader[data-mode="plain"] .trf-word,
+.trf-reader[data-mode="highlight"] .trf-word,
+.trf-reader[data-mode="karaoke"] .trf-word {
   position: static;
   transform: none;
   display: flex;
+  align-items: baseline;
   gap: 0.6ch;
   font-size: calc(var(--trf-size) * 0.66);
   font-weight: 400;
 }
 
-/* Bionic has no focal column, so the marks that bracket one would sit in the
-   middle of the sliding window pointing at nothing. The setting stays as it is
-   — it is correct for RSVP, which is the mode it describes. */
-.trf-reader[data-mode="bionic"] .trf-guide {
+/* No focal column in any mode that shows a whole line, or in Focus line, where
+   the word is centred normally rather than on a pivot letter — the marks would
+   bracket a point that means nothing. The setting stays as it is: it is correct
+   for RSVP, which is the mode it describes. */
+.trf-reader[data-mode="bionic"] .trf-guide,
+.trf-reader[data-mode="plain"] .trf-guide,
+.trf-reader[data-mode="highlight"] .trf-guide,
+.trf-reader[data-mode="karaoke"] .trf-guide,
+.trf-reader[data-mode="focusline"] .trf-guide {
   display: none;
 }
 
-/* Text-coloured, not faded. Bionic's whole claim is that the leading letters of
-   every word in the window are emboldened — dimming these by colour *and* by
-   opacity compounded until the bold was invisible, so only the current word
-   looked emboldened and the mode did not do what it says. Opacity alone dims
-   them now, which leaves the slider meaningful and the bold legible. */
-.trf-bionic {
+/* Faded by opacity, never by colour. Dimming by both compounded until the
+   surrounding words were invisible — which, in Bionic, meant the mode did not
+   do the one thing it claims to do. */
+.trf-lw {
   opacity: var(--trf-context-opacity, 0.34);
 }
 
-.trf-bionic--current {
+.trf-lw--current {
   color: var(--text);
   opacity: 1;
 }
 
-.trf-bionic b {
+/* ── bionic ── */
+
+.trf-reader[data-mode="bionic"] .trf-lw b {
   font-weight: 700;
 }
 
-.trf-bionic--current b {
+/* The one rule that makes Bionic loud, and therefore the one that can be turned
+   off. Without it the emphasis is carried by weight alone. */
+.trf-reader[data-mode="bionic"][data-bionic-accent="true"] .trf-lw--current b {
   color: var(--accent);
+}
+
+/* ── plain ── */
+
+/* The quietest the reader gets: no pivot, no bold, no accent anywhere. The
+   current word is simply the one at full strength. */
+.trf-reader[data-mode="plain"] .trf-lw {
+  color: var(--faded);
+}
+
+/* Scoped to the mode, not left to the shared `.trf-lw--current`. That rule is
+   one class, the one above it is an attribute plus a class, so unscoped it lost
+   and the current word came out faded — distinguished by opacity alone, in the
+   one mode that has nothing else to distinguish it with. */
+.trf-reader[data-mode="plain"] .trf-lw--current {
+  color: var(--text);
+  opacity: 1;
+}
+
+/* ── highlighter ── */
+
+/* Every word carries the same padding and the same transparent border, marked
+   or not. Putting the box on the current word alone would move every other word
+   sideways each time the block advanced, and a line that jumps once per word is
+   worse than no highlight at all. */
+/* Tighter than the other line modes, because each word's own padding is
+   already holding it off its neighbours; the usual gap on top of that spaced
+   the line out like a table of contents. */
+.trf-reader[data-mode="highlight"] .trf-word {
+  gap: 0.2ch;
+}
+
+.trf-reader[data-mode="highlight"] .trf-lw {
+  color: var(--faded);
+  padding: 0.08em 0.32em;
+  border: 1px solid transparent;
+  border-radius: 0.24em;
+}
+
+.trf-reader[data-mode="highlight"] .trf-lw--current {
+  background: var(--accent);
+  border-color: var(--accent);
+  /* Reversed out of the block rather than tinted, so the contrast holds
+     whatever accent someone picks in a custom palette. */
+  color: var(--bg);
+}
+
+/* ── karaoke ── */
+
+/* Nothing is emphasised; the boundary between what has been said and what has
+   not is the whole signal, exactly as it is on a karaoke screen. */
+.trf-reader[data-mode="karaoke"] .trf-lw--past,
+.trf-reader[data-mode="karaoke"] .trf-lw--current {
+  color: var(--text);
+  opacity: 1;
+}
+
+.trf-reader[data-mode="karaoke"] .trf-lw--future {
+  color: var(--faded);
+  opacity: var(--trf-context-opacity, 0.34);
+}
+
+/* ── focus line ── */
+
+/* RSVP's rhythm without its pivot. Centred by the stage's flexbox, so none of
+   the offset properties the pivot needs are set or read here. */
+.trf-reader[data-mode="focusline"] .trf-word {
+  position: static;
+  transform: none;
+  color: var(--text);
 }
 
 /* YouTube's own captions, hidden while the reader is running: leaving both on

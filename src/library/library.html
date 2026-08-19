@@ -333,6 +333,15 @@
         margin-bottom: 26px;
       }
 
+      /* The measured box. The chart is drawn at whatever width this reports, so
+         it needs to be a plain block that fills the panel and nothing else —
+         padding or a border here would put the SVG and the measurement out of
+         step by exactly that much. */
+      .chart-holder {
+        display: block;
+        width: 100%;
+      }
+
       .chart-head {
         display: flex;
         align-items: center;

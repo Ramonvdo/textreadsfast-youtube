@@ -1,13 +1,16 @@
-"""Render the Read Mode harness and check it against the concept's layout.
+"""Render the harnesses and check the parts of them a person cannot eyeball.
 
-Two jobs, deliberately separated:
+Three jobs, deliberately separated:
 
-1. Write a screenshot to dev-shots/, for eyeballing next to
-   video-viewer-concept.jpg.
-2. Assert the three column boundaries land where the concept puts them. This is
-   the automated gate. A per-pixel diff against a hand-composed JPEG would never
+1. Write screenshots to dev-shots/, for eyeballing Read Mode next to
+   video-viewer-concept.jpg, and the six reading modes next to each other.
+2. Assert the column boundaries land where the concept puts them. This is the
+   automated gate. A per-pixel diff against a hand-composed JPEG would never
    converge, and chasing that number would make the design worse, so the machine
    checks geometry and a person checks taste.
+3. Assert Highlighter does not change a word's width when it becomes the current
+   one. That would shift the whole line once per word, and it is the one failure
+   here that no still screenshot can show.
 
 Uses the Playwright already installed for this machine's Python, matching the
 precedent set by scripts/fetch-fonts.py.
@@ -32,6 +35,15 @@ DIST = os.path.join(ROOT, "dist")
 HARNESS = os.path.join(DIST, "harness.html")
 OUT_DIR = os.path.join(ROOT, "dev-shots")
 OUT = os.path.join(OUT_DIR, "readmode.png")
+MODES_OUT = os.path.join(OUT_DIR, "reading-modes.png")
+
+# The modes harness is a 2x4 grid of stand-in players: tall rather than wide.
+MODES_WIDTH = 1400
+MODES_HEIGHT = 1580
+
+# Sub-pixel differences are rounding in the layout engine, not a jump. Anything
+# a person could see is far larger: one side of Highlighter's padding is ~4px.
+JUMP_TOLERANCE = 0.6
 
 WIDTH = 1920
 HEIGHT = 950
@@ -131,11 +143,54 @@ def main() -> None:
             page.wait_for_function("() => window.__ready === true", timeout=15000)
             page.screenshot(path=os.path.join(OUT_DIR, "readmode-error.png"))
 
+            # The reader itself, every mode at once. Its own page rather than
+            # another state of the Read Mode harness: this one is about the
+            # overlay over a player, and shares none of that layout.
+            modes_page = browser.new_page(
+                viewport={"width": MODES_WIDTH, "height": MODES_HEIGHT},
+                device_scale_factor=1,
+            )
+            modes_page.on("pageerror", lambda e: errors.append(str(e)))
+            modes_page.goto(f"http://127.0.0.1:{port}/modes.html")
+            try:
+                modes_page.wait_for_function(
+                    "() => window.__ready === true", timeout=15000
+                )
+            except Exception as error:
+                for line in errors:
+                    print(f"page error: {line}", file=sys.stderr)
+                raise SystemExit(f"modes harness never became ready: {error}")
+            modes_page.screenshot(path=MODES_OUT, full_page=True)
+            jump = modes_page.evaluate("() => window.__jump")
+
             browser.close()
     finally:
         httpd.shutdown()
 
     print(f"wrote {OUT}\n")
+    print(f"wrote {MODES_OUT}")
+
+    # ---- the highlighter must not move the line ----------------------------
+    if not jump:
+        sys.exit("the modes harness measured no words; its probe is broken")
+
+    worst = max(abs(w["asCurrent"] - w["asOther"]) for w in jump)
+    moved = [w for w in jump if abs(w["asCurrent"] - w["asOther"]) > JUMP_TOLERANCE]
+    print(
+        f"highlighter: {len(jump)} words measured, worst width change "
+        f"{worst:.2f}px  {'FAIL' if moved else 'pass'}"
+    )
+    print()
+    if moved:
+        for word in moved:
+            print(
+                f"  {word['text']!r}: {word['asCurrent']:.2f} -> {word['asOther']:.2f}",
+                file=sys.stderr,
+            )
+        sys.exit(
+            "Highlighter changes a word's width when it becomes current, so the "
+            "line shifts sideways once per word. Every word needs the same box."
+        )
 
     stage = boxes.get("stage")
     if stage:
