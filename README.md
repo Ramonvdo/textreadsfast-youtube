@@ -110,7 +110,7 @@ on screen.
 | ---------------- | -------------------------------------------------------------------- |
 | **Default**      | One word at a fixed point, dark, a little context either side.       |
 | **Peripheral**   | Pinned word with the preview bolded ahead of it, and nothing behind. |
-| **Serif Flow**   | A whole line at once, serif on warm light grey. Reads like a page.   |
+| **Serif Flow**   | A whole line at once, serif in black on white. Reads like print.     |
 | **Clarity Cold** | Atkinson at full weight on cold light blue, with a blue pivot.       |
 | **Obsidian**     | A violet block on lilac, over near-black.                            |
 | **Black Box**    | White on solid black, a line at a time. Nothing moves.               |

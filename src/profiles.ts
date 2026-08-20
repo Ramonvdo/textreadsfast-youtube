@@ -169,11 +169,11 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
   {
     id: "serif-flow",
     name: "Serif Flow",
-    blurb: "A whole line at once, serif on warm light grey. Reads like a page.",
+    blurb: "A whole line at once, serif in black on white. Reads like print.",
     builtIn: true,
     settings: {
       mode: "bionic",
-      theme: "mist",
+      theme: "custom",
       font: "source_serif",
       fontSize: 28,
       letterSpacing: 0,
@@ -189,8 +189,18 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       removeFillers: true,
       hideNativeCaptions: true,
       readerInReadMode: true,
-      ...UNUSED_PALETTE,
-      ...PLAIN_TYPE,
+      // Paper, not a screen: near-white ground, near-black ink. The accent is
+      // the only pure value, and it lands only on Bionic's lead letters, so
+      // they darken rather than colour -- emphasis without a second hue.
+      customBackground: "#f2f2f2",
+      customText: "#303030",
+      customFaded: "#babec4",
+      customAccent: "#000000",
+      fontStyle: "normal",
+      textCase: "none",
+      textWeight: 600,
+      textOutline: 0,
+      lineWords: 12,
     },
   },
   {
