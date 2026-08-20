@@ -128,6 +128,46 @@ def alpha(css):
     return 1.0
 
 
+# Enough of `chrome.*` for the options page to boot outside an extension. Its
+# own storage calls are wrapped in try/catch, but the profile bar and the AI
+# panel are not, and an exception there stops the page before it renders.
+CHROME_STUB = """
+const store = {};
+const area = {
+  get: (d) => Promise.resolve({ ...(d || {}), ...store }),
+  set: (p) => { Object.assign(store, p); return Promise.resolve(); },
+};
+window.chrome = {
+  storage: { sync: area, local: area,
+             onChanged: { addListener(){}, removeListener(){} } },
+  runtime: { getURL: (p) => p, sendMessage: () => Promise.resolve({}),
+             lastError: null },
+  permissions: { contains: () => Promise.resolve(true) },
+};
+"""
+
+# Each built-in theme's real background, read off the stylesheet by the page
+# itself. The four colour pickers have to agree with whichever theme is chosen.
+THEME_BACKGROUNDS = {
+    "focus": "#16181b",
+    "slate": "#23262b",
+    "nocturne": "#1a1f27",
+    "mist": "#eef0f1",
+    "lyric": "#0d1a26",
+}
+
+PICK_THEME = """(name) => {
+  const el = document.getElementById('f-theme');
+  el.value = name;
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}"""
+
+SWATCHES = """() => Object.fromEntries(
+  ['customBackground','customText','customFaded','customAccent']
+    .map((n) => [n, document.getElementById('f-' + n).value.toLowerCase()])
+)"""
+
+
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     """The request log is noise that would bury the layout table."""
 
@@ -214,6 +254,46 @@ def main() -> None:
             jump = modes_page.evaluate("() => window.__jump")
             inks = modes_page.evaluate(INKS)
 
+            # ---- the options page's colour pickers ----------------------
+            #
+            # They were filled once when the row was built and never again, so
+            # choosing a theme left them showing the last stored palette. That
+            # was misleading on its own and wrong in combination with the rule
+            # that touching one switches to Custom: "this theme, but greener"
+            # silently became the stored palette with a green accent.
+            #
+            # Only a real browser can catch it -- the page reads the palette
+            # back out of computed style, which no unit test evaluates.
+            opts = browser.new_page(
+                viewport={"width": 1100, "height": 1200}, device_scale_factor=1
+            )
+            opts.on("pageerror", lambda e: errors.append(str(e)))
+            opts.add_init_script(CHROME_STUB)
+            opts.goto(f"http://127.0.0.1:{port}/options.html")
+            opts.wait_for_selector("#f-theme", timeout=15000)
+            opts.wait_for_selector("#f-customBackground", timeout=15000)
+
+            swatches = {}
+            for theme in THEME_BACKGROUNDS:
+                opts.evaluate(PICK_THEME, theme)
+                opts.wait_for_timeout(120)
+                swatches[theme] = opts.evaluate(SWATCHES)
+
+            # Forking a theme has to carry the whole palette, not just the one
+            # colour that was touched.
+            opts.evaluate(PICK_THEME, "slate")
+            opts.wait_for_timeout(120)
+            opts.eval_on_selector(
+                "#f-customAccent",
+                "el => { el.value = '#00ff00';"
+                " el.dispatchEvent(new Event('input', { bubbles: true })); }",
+            )
+            opts.wait_for_timeout(250)
+            forked = opts.evaluate(SWATCHES)
+            forked["_theme"] = opts.evaluate(
+                "() => document.getElementById('f-theme').value"
+            )
+
             browser.close()
     finally:
         httpd.shutdown()
@@ -270,6 +350,35 @@ def main() -> None:
             "Bionic held still must render one flat colour. The three-tier "
             "brightness exists to say which word is being spoken, and a held "
             "line has no such word."
+        )
+
+    # ---- the colour pickers follow the theme -------------------------------
+    wrong = [
+        f"{theme}: pickers show {got['customBackground']}, theme is {want}"
+        for theme, want in THEME_BACKGROUNDS.items()
+        for got in [swatches[theme]]
+        if got["customBackground"] != want
+    ]
+    print(
+        "colour pickers track the theme: %d themes  %s"
+        % (len(THEME_BACKGROUNDS), "FAIL" if wrong else "pass")
+    )
+    for line in wrong:
+        print(f"  {line}", file=sys.stderr)
+    if wrong:
+        sys.exit("The colour pickers do not show the palette that is on screen.")
+
+    kept = (
+        forked["_theme"] == "custom"
+        and forked["customAccent"] == "#00ff00"
+        and forked["customBackground"] == THEME_BACKGROUNDS["slate"]
+    )
+    print("forking a theme keeps the rest of it:  %s" % ("pass" if kept else "FAIL"))
+    if not kept:
+        print(f"  got {forked}", file=sys.stderr)
+        sys.exit(
+            "Changing one colour must fork the palette on screen, not the one "
+            "last stored."
         )
 
     print()

@@ -141,7 +141,7 @@ const FIELDS: Field[] = [
     key: "theme",
     group: "appearance",
     label: "Theme",
-    help: "None of the built-in palettes use pure black or pure white — that contrast is what causes eye strain over a long session. Custom uses the four colours below.",
+    help: "None of the built-in palettes use pure black or pure white — that contrast is what causes eye strain over a long session. The four colours below always show whichever palette is on screen.",
     options: (Object.keys(THEME_LABELS) as ReaderTheme[]).map((value) => ({
       value,
       label: THEME_LABELS[value],
@@ -152,7 +152,7 @@ const FIELDS: Field[] = [
     key: "customBackground",
     group: "appearance",
     label: "Custom: background",
-    help: "Used by the Custom theme. Picking any of these four switches to it.",
+    help: "These show the palette on screen, whichever theme is selected. Change one and it becomes your Custom theme, starting from the theme you were looking at.",
   },
   {
     kind: "color",
@@ -451,6 +451,70 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
 const canHold = (mode: ReadingMode): boolean =>
   mode === "plain" || mode === "bionic";
 
+/**
+ * The palette the preview is actually rendering.
+ *
+ * Read back off the element rather than duplicated in TypeScript, so the
+ * stylesheet stays the one place a theme is defined. Custom properties have
+ * their `var()` chains resolved by the time they are computed, so this returns
+ * plain hex even for the Custom theme, whose `--bg` is a `var()` reference.
+ */
+function shownPalette(): Record<
+  (typeof CUSTOM_COLOR_KEYS)[number],
+  string
+> | null {
+  const root = document.getElementById("preview");
+  if (!root) return null; // called before the preview is mounted
+  const styles = getComputedStyle(root);
+  const read = (name: string): string => styles.getPropertyValue(name).trim();
+  const palette = {
+    customBackground: read("--bg"),
+    customText: read("--text"),
+    customFaded: read("--faded"),
+    customAccent: read("--accent"),
+  };
+  return Object.values(palette).every((v) => HEX.test(v)) ? palette : null;
+}
+
+/** `<input type="color">` accepts nothing else, so anything else is skipped. */
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/**
+ * Point the four pickers at the palette on screen.
+ *
+ * THE BUG THIS FIXES: they were filled once when the row was built and never
+ * again, so choosing Slate left them showing whatever was last stored. That was
+ * misleading on its own, and actively wrong in combination with the rule that
+ * touching a picker switches to Custom -- "Slate, but greener" silently became
+ * the old stored palette with a green accent, because the other three were
+ * never seeded from Slate at all.
+ */
+function paintSwatches(): void {
+  const palette =
+    settings.theme === "custom"
+      ? {
+          customBackground: settings.customBackground,
+          customText: settings.customText,
+          customFaded: settings.customFaded,
+          customAccent: settings.customAccent,
+        }
+      : shownPalette();
+  if (!palette) return;
+
+  for (const key of CUSTOM_COLOR_KEYS) {
+    const input = document.getElementById(`f-${key}`);
+    if (!(input instanceof HTMLInputElement)) continue;
+    const value = palette[key];
+    // Never write the value being dragged back onto its own input.
+    if (!HEX.test(value) || input.value.toLowerCase() === value.toLowerCase()) {
+      continue;
+    }
+    input.value = value;
+    const shown = input.parentElement?.querySelector("output");
+    if (shown) shown.textContent = value;
+  }
+}
+
 function syncDependentControls(): void {
   const theme = document.getElementById("f-theme");
   if (theme instanceof HTMLSelectElement && theme.value !== settings.theme) {
@@ -467,6 +531,7 @@ function syncDependentControls(): void {
   };
 
   for (const key of CUSTOM_COLOR_KEYS) dim(key, settings.theme !== "custom");
+  paintSwatches();
   dim("bionicAccent", settings.mode !== "bionic");
   // A held line is built from the transcript's punctuation, so neither count is
   // read; line length is what it uses instead of them.
@@ -525,7 +590,15 @@ function update(patch: Partial<Settings>): void {
    */
   const touchedPalette = CUSTOM_COLOR_KEYS.some((key) => key in patch);
   if (touchedPalette && settings.theme !== "custom") {
-    patch = { ...patch, theme: "custom" };
+    /*
+     * Fork the palette that is on screen, not the one last stored.
+     *
+     * Seeding all four and then letting the touched one override is what makes
+     * "this theme, but greener" mean that. Taking only the changed colour left
+     * the other three at stale values, so nudging Slate's accent produced
+     * whatever palette happened to be saved, with a green accent on it.
+     */
+    patch = { ...(shownPalette() ?? {}), ...patch, theme: "custom" };
   }
 
   settings = { ...settings, ...patch };
@@ -724,6 +797,8 @@ async function main(): Promise<void> {
         settings = next;
         renderFields();
         overlay?.apply(previewSettings(settings));
+        // After the preview repaints, not before: the swatches read it.
+        syncDependentControls();
       },
     });
     await profileBar.refresh();
@@ -737,6 +812,8 @@ async function main(): Promise<void> {
   await mountDevicePrefs();
 
   runPreview();
+  // The preview is the thing the swatches read, and it did not exist until now.
+  syncDependentControls();
 }
 
 void main();

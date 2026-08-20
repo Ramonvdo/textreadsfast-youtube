@@ -25,7 +25,7 @@ pnpm run typecheck
 pnpm test               # caption parsing and word lookup
 pnpm run check-drift    # reader-core vs the desktop app
 pnpm run check          # all of the above
-pnpm run shoot          # screenshot both harnesses, assert their geometry
+pnpm run shoot          # screenshot the harnesses; assert geometry, inks, options
 pnpm run reel           # re-record the README's GIFs
 pnpm run format         # prettier; `src/reader-core` is ignored on purpose
 ```
@@ -162,6 +162,13 @@ shoot` rather than by any test.
   `pivotOffsetPx` measures with a canvas, and a canvas measures exactly the font
   it is handed. Omitting them measured a bold or italic proportional face as
   regular upright, and the pivot landed off the column by the difference.
+
+- **The options page reads palettes back out of computed style**, rather than
+  duplicating them in TypeScript. `shownPalette()` takes `--bg --text --faded
+--accent` off the live preview, which keeps the stylesheet the one place a
+  theme is defined — and works for Custom too, because a custom property has its
+  `var()` chain resolved by the time it is computed. Anything that renders a
+  palette in the UI should read it, not restate it.
 
 - **Custom theme colours are written as `--trf-custom-*`**, never as `--bg` and
   friends. A `[data-theme="custom"]` block maps them across, so all eight
