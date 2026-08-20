@@ -1,7 +1,13 @@
 # Privacy Policy
 
 **TextReadsFast for YouTube**
-Last updated: 19 August 2026
+Last updated: 20 August 2026
+
+> **The published version of this policy lives at
+> <https://ravandohq.github.io/privacy-policy/textreadsfast-youtube/>.** That is
+> the URL the Chrome Web Store listing points at, and the one to treat as
+> canonical if the two ever disagree. This copy is kept here so the policy
+> travels with the source.
 
 The short version: the extension reads YouTube's own caption tracks and shows
 them back to you differently. That happens entirely inside your browser. The one
