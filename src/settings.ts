@@ -40,9 +40,28 @@ export const MODE_LABELS: Record<ReadingMode, string> = {
   rsvp: "RSVP — one word at a fixed point",
   "rsvp-bionic": "RSVP + Bionic — pinned word, bolded context",
   bionic: "Bionic — bold leading letters",
-  plain: "Static — a caption line that holds still",
+  plain: "Plain — a caption line with nothing marked",
   highlight: "Highlighter — a block on the current word",
   focusline: "Focus line — one word, plainly centred",
+};
+
+/**
+ * How the window advances.
+ *
+ * An axis of its own, not a mode. "Static" used to be baked into the `plain`
+ * mode, which conflated two independent questions — how the window moves, and
+ * how the current word is marked — and meant Bionic could only ever slide.
+ * Separated, "Bionic held still" is just a combination rather than a new mode.
+ *
+ * Only the line modes can hold still: RSVP and Focus line show one word at a
+ * time, so there is no line to hold, and Highlighter's block needs a current
+ * word to sit on. See `readsWholeLine`.
+ */
+export type Motion = "dynamic" | "static";
+
+export const MOTION_LABELS: Record<Motion, string> = {
+  dynamic: "Dynamic — the window slides, a word at a time",
+  static: "Static — a whole line, held still",
 };
 
 export const THEME_LABELS: Record<ReaderTheme, string> = {
@@ -98,6 +117,11 @@ export interface Settings {
   customText: string;
   customFaded: string;
   customAccent: string;
+  /**
+   * Whether the line slides or holds still. Read only by the line modes; see
+   * `readsWholeLine`, which is the single place that decides.
+   */
+  motion: Motion;
   /** Italic, for the styles where slanted text is the whole character. */
   fontStyle: "normal" | "italic";
   /**
@@ -172,6 +196,7 @@ export const DEFAULTS: Settings = {
   customText: "#e8e6e3",
   customFaded: "#6e7278",
   customAccent: "#e4572e",
+  motion: "dynamic",
   fontStyle: "normal",
   textCase: "none",
   textWeight: 600,

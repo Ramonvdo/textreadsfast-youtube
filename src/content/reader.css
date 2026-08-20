@@ -329,35 +329,45 @@
 
 /* ── plain ── */
 
-/* An ordinary subtitle, and the only mode in which nothing moves.
- *
- * Every other mode advances one word per word — something on screen changes
- * roughly three hundred times a minute. This shows a whole line, holds it
- * completely still, and swaps once at a sentence or clause boundary. The line
- * itself is built in `lines.ts`; all this has to do is stop the sliding-window
- * machinery from applying.
- *
- * Uniform, therefore: no word is marked, because marking one is the thing that
- * would make it move again. */
-.trf-reader[data-mode="plain"] .trf-lw,
-.trf-reader[data-mode="plain"] .trf-lw--current,
-.trf-reader[data-mode="plain"] .trf-lw--past,
-.trf-reader[data-mode="plain"] .trf-lw--future {
+/* Plain: a line with nothing marked at all — no pivot, no bold, no accent. On
+   its own it still slides, one word per word, with the spoken word at full
+   strength and its neighbours faded. Set motion to static and it stops moving
+   entirely, which is the combination most people mean by "just subtitles". */
+.trf-reader[data-mode="plain"] .trf-lw {
+  color: var(--faded);
+}
+
+/* Scoped to the mode, not left to the shared `.trf-lw--current`. That rule is
+   one class, the one above it is an attribute plus a class, so unscoped it lost
+   and the current word came out faded — distinguished by opacity alone, in the
+   one mode that has nothing else to distinguish it with. */
+.trf-reader[data-mode="plain"] .trf-lw--current {
   color: var(--text);
   opacity: 1;
 }
 
-/* Wraps rather than clips. The other line modes are a window onto a longer
-   stream, so trimming the ends is honest and the mask says so. A caption is a
-   whole thought, and half of one is a bug — so the nowrap, the overflow clip
-   and the edge fade are all switched off here. */
-.trf-reader[data-mode="plain"] .trf-stage {
+/* ── static ──────────────────────────────────────────────────────────────
+   A held line, for the two modes that can hold one. Everything here undoes a
+   piece of the sliding-window machinery.
+
+   Written as `[data-motion][data-mode]` pairs rather than `[data-motion]`
+   alone, deliberately. One attribute would tie on specificity with the mode
+   rules above and be decided by source order, which is the kind of thing that
+   silently reverses when a block is moved. Two attributes always win, wherever
+   they sit in the file. */
+
+/* Wraps rather than clips. The sliding modes are a window onto a longer stream,
+   so trimming the ends is honest and the mask says so. A held line is a whole
+   thought, and half of one is a bug. */
+.trf-reader[data-motion="static"][data-mode="plain"] .trf-stage,
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-stage {
   white-space: normal;
   overflow: visible;
   mask-image: none;
 }
 
-.trf-reader[data-mode="plain"] .trf-word {
+.trf-reader[data-motion="static"][data-mode="plain"] .trf-word,
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-word {
   flex-wrap: wrap;
   justify-content: center;
   row-gap: 0.25em;
@@ -366,6 +376,30 @@
      there is no reason to shrink the text to make one fit. */
   font-size: var(--trf-size);
   line-height: 1.35;
+}
+
+/* Nothing is current in a held line. The whole line is what is being spoken, so
+   marking its first word would be arbitrary — and marking anything is what
+   would make it appear to move again. */
+.trf-reader[data-motion="static"][data-mode="plain"] .trf-lw,
+.trf-reader[data-motion="static"][data-mode="plain"] .trf-lw--current,
+.trf-reader[data-motion="static"][data-mode="plain"] .trf-lw--past,
+.trf-reader[data-motion="static"][data-mode="plain"] .trf-lw--future,
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-lw,
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-lw--current,
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-lw--past,
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-lw--future {
+  color: var(--text);
+  opacity: 1;
+}
+
+/* Bionic held still is Bionic as it appears on paper: one weight of ink, the
+   leading letters heavier, and nothing dimmed or coloured. The three-tier
+   brightness the sliding version needs exists to say which word is being spoken
+   — and here there isn't one. */
+.trf-reader[data-motion="static"][data-mode="bionic"] .trf-lw b {
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* ── highlighter ── */

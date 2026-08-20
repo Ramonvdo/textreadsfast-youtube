@@ -73,14 +73,38 @@ All six reading the same sentence, at the same instant:
   <img src=".github/assets/modes.gif" width="740" alt="The six reading modes running side by side" />
 </p>
 
-| Mode              | What it does                                                                                                          |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.                                  |
-| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead.                              |
-| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.                                     |
-| **Static**        | An ordinary subtitle. Holds completely still and swaps a whole line at a time — the only mode in which nothing moves. |
-| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.                                  |
-| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                                                |
+| Mode              | What it does                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| **RSVP**          | One word, pinned at the focal point, with the pivot letter picked out. The original.     |
+| **RSVP + Bionic** | The same pinned word, with the neighbours' leading letters bolded so you can read ahead. |
+| **Bionic**        | A line at once, leading letters emboldened. The accent on them can be turned off.        |
+| **Plain**         | A line with nothing marked at all — no pivot, no bold, no accent. The quietest of them.  |
+| **Highlighter**   | A block behind the current word, the way captions look on Shorts. Holds up at speed.     |
+| **Focus line**    | RSVP's rhythm without its coloured letter — one word, plainly centred.                   |
+
+### Dynamic or static
+
+A separate axis, and the one worth knowing about. It decides whether the line
+**slides** — advancing a word at a time, so something on screen changes roughly
+three hundred times a minute — or **holds still**, showing a whole line and
+swapping once at a sentence or clause boundary, around twenty times a minute.
+
+That is a setting rather than a mode because it is a genuinely independent
+question. "How the window moves" and "how the current word is marked" were
+conflated before, which meant Bionic could only ever slide. Split apart, Bionic
+held still is just a combination — a printed-looking line with its leading
+letters bolded, and nothing sliding underneath you.
+
+Read by **Bionic** and **Plain**. The one-word modes have no line to hold, and
+Highlighter's block has to sit on the word being spoken, so those four always
+slide and the control dims itself.
+
+Static also builds its own lines, since YouTube's cue boundaries do not survive
+parsing — the transcript is one flat timeline of words, which is what every
+sliding mode needs. They are rebuilt from the punctuation instead: at sentences,
+at clauses once a line is worth ending, and at a hard cap so an unpunctuated
+auto-transcript cannot run off the card. See
+[`src/content/lines.ts`](src/content/lines.ts).
 
 ## Ready-made looks
 
@@ -111,6 +135,7 @@ on screen.
 | **Default**      | One word at a fixed point, dark, a little context either side.       |
 | **Peripheral**   | Pinned word with the preview bolded ahead of it, and nothing behind. |
 | **Serif Flow**   | A whole line at once, serif in black on white. Reads like print.     |
+| **Serif Static** | The same page, held still. Bionic without anything sliding.          |
 | **Clarity Cold** | Atkinson at full weight on cold light blue, with a blue pivot.       |
 | **Obsidian**     | A violet block on lilac, over near-black.                            |
 | **Black Box**    | White on solid black, a line at a time. Nothing moves.               |

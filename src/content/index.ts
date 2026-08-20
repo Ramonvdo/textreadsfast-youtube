@@ -21,7 +21,7 @@ import {
   type TimedWord,
 } from "./captions";
 import { ReaderOverlay } from "./overlay";
-import { buildLines, lineAt, type Line } from "./lines";
+import { buildLines, lineAt, readsWholeLine, type Line } from "./lines";
 import { adAction, isAdShowing } from "./ads";
 import {
   forgetWatchData,
@@ -328,7 +328,7 @@ function track(
     }
 
     /*
-     * Static mode is a line at a time, not a window around the playhead.
+     * Static is a line at a time, not a window around the playhead.
      *
      * Keyed on the line's own start index so the render guard holds the whole
      * line still: this runs once a frame, and without a key that changes only
@@ -336,7 +336,7 @@ function track(
      * visible reason. `current` is the line's first word purely so the guard
      * upstream still has a word to work with; nothing marks it on screen.
      */
-    if (settings.mode === "plain") {
+    if (readsWholeLine(settings)) {
       const line = lineAt(lines(), index);
       if (!line) {
         overlay.clear();

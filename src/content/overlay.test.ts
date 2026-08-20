@@ -221,6 +221,24 @@ describe("mounting", () => {
   });
 });
 
+describe("motion", () => {
+  it("is exposed to the stylesheet, which is where the axes meet", () => {
+    expect(mount({ motion: "dynamic" }).root.dataset.motion).toBe("dynamic");
+    expect(mount({ motion: "static" }).root.dataset.motion).toBe("static");
+  });
+
+  /*
+   * Bionic held still keeps its bold and loses everything else. The three-tier
+   * brightness of the sliding version exists to say which word is being spoken,
+   * and a held line has no such word — so the markup must still carry the `<b>`
+   * that the CSS then renders at one flat weight of ink.
+   */
+  it("keeps the bold when Bionic holds still", () => {
+    const { root } = mount({ mode: "bionic", motion: "static" });
+    expect(root.querySelectorAll(".trf-lw b").length).toBeGreaterThan(0);
+  });
+});
+
 describe("the custom palette", () => {
   const PALETTE: Partial<Settings> = {
     customBackground: "#101010",

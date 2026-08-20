@@ -19,6 +19,24 @@
  */
 
 import type { Word } from "../reader-core/words";
+import type { Settings } from "../settings";
+
+/**
+ * Does this combination read a line at a time?
+ *
+ * The single place that decides, because three callers need the same answer —
+ * the render loop, and both screenshot harnesses — and a fourth reading of it
+ * would be a fourth chance to disagree.
+ *
+ * Only Bionic and Plain can hold still. RSVP, RSVP + Bionic and Focus line show
+ * one word at a time, so there is no line to hold; Highlighter's block has to
+ * sit on the word being spoken, and a held line has no such word. Those four
+ * ignore the setting rather than doing something incoherent with it.
+ */
+export function readsWholeLine(settings: Settings): boolean {
+  if (settings.motion !== "static") return false;
+  return settings.mode === "plain" || settings.mode === "bionic";
+}
 
 export interface Line {
   words: Word[];

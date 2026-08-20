@@ -38,9 +38,9 @@ OUT_DIR = os.path.join(ROOT, "dev-shots")
 OUT = os.path.join(OUT_DIR, "readmode.png")
 MODES_OUT = os.path.join(OUT_DIR, "reading-modes.png")
 
-# The modes harness is a 2x5 grid of stand-in players: tall rather than wide.
+# The modes harness is a 2x6 grid of stand-in players: tall rather than wide.
 MODES_WIDTH = 1400
-MODES_HEIGHT = 2000
+MODES_HEIGHT = 2420
 
 # Sub-pixel differences are rounding in the layout engine, not a jump. Anything
 # a person could see is far larger: one side of Highlighter's padding is ~4px.
@@ -91,10 +91,22 @@ INKS = """() => {
     const node = reader && reader.querySelector(sel);
     return node ? getComputedStyle(node).color : null;
   };
+  // Bionic held still: every word one flat weight of ink, bold included. The
+  // rules that do this beat the sliding ones on a two-attribute selector, and
+  // a one-attribute version would tie and be decided by source order -- which
+  // is the kind of thing that silently reverses when a block is moved.
+  const held = document.querySelector(
+    '.trf-reader[data-motion="static"][data-mode="bionic"]'
+  );
+  const heldWord = held && held.querySelector('.trf-lw--future');
+  const heldCurrent = held && held.querySelector('.trf-lw--current');
   return {
     focus:   pick('rsvp-bionic', '.trf-word'),
     lead:    pick('rsvp-bionic', '.trf-context--after b'),
     context: pick('rsvp-bionic', '.trf-context--after'),
+    heldWord:    heldWord ? getComputedStyle(heldWord).color : null,
+    heldBold:    heldWord ? getComputedStyle(heldWord.querySelector('b')).color : null,
+    heldCurrent: heldCurrent ? getComputedStyle(heldCurrent).color : null,
   };
 }"""
 
@@ -240,6 +252,24 @@ def main() -> None:
             "Bionic's lead letters must sit above the words around them and "
             "below the word being spoken. Full strength marks the current "
             "word and nothing else may claim it."
+        )
+
+    # ---- bionic held still is one flat weight of ink -----------------------
+    held = {k: inks.get(k) for k in ("heldWord", "heldBold", "heldCurrent")}
+    if any(v is None for v in held.values()):
+        sys.exit("could not read the held-bionic inks; the harness changed shape")
+    flat = len(set(held.values())) == 1
+    print(
+        "bionic held still: word/bold/current all %s  %s"
+        % (held["heldWord"], "pass" if flat else "FAIL")
+    )
+    if not flat:
+        for name, value in held.items():
+            print(f"  {name}: {value}", file=sys.stderr)
+        sys.exit(
+            "Bionic held still must render one flat colour. The three-tier "
+            "brightness exists to say which word is being spoken, and a held "
+            "line has no such word."
         )
 
     print()

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildLines, lineAt, MAX_LINE_WORDS } from "./lines";
+import { buildLines, lineAt, MAX_LINE_WORDS, readsWholeLine } from "./lines";
+import { DEFAULTS, type ReadingMode, type Settings } from "../settings";
 import { classify } from "../reader-core/words";
 
 const words = (text: string) => text.split(/\s+/).filter(Boolean).map(classify);
@@ -107,5 +108,38 @@ describe("lineAt", () => {
     const started = Date.now();
     for (let i = 0; i < 20_000; i += 1) lineAt(huge, i * 2);
     expect(Date.now() - started).toBeLessThan(300);
+  });
+});
+
+describe("readsWholeLine", () => {
+  const at = (patch: Partial<Settings>) =>
+    readsWholeLine({ ...DEFAULTS, ...patch });
+
+  it("holds a line only for the modes that have one", () => {
+    expect(at({ motion: "static", mode: "plain" })).toBe(true);
+    expect(at({ motion: "static", mode: "bionic" })).toBe(true);
+  });
+
+  /*
+   * The other four ignore it rather than doing something incoherent. RSVP,
+   * RSVP + Bionic and Focus line show a single word, so there is no line to
+   * hold; Highlighter's block has to sit on the word being spoken, and a held
+   * line has no such word — the block would land on the first word and stay
+   * there, which says something untrue.
+   */
+  it("is ignored by the modes that cannot hold one", () => {
+    for (const mode of [
+      "rsvp",
+      "rsvp-bionic",
+      "highlight",
+      "focusline",
+    ] as ReadingMode[]) {
+      expect(at({ motion: "static", mode })).toBe(false);
+    }
+  });
+
+  it("never holds a line while dynamic", () => {
+    expect(at({ motion: "dynamic", mode: "plain" })).toBe(false);
+    expect(at({ motion: "dynamic", mode: "bionic" })).toBe(false);
   });
 });

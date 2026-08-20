@@ -174,6 +174,9 @@ export class ReaderOverlay {
     // Read by one CSS rule rather than by TypeScript, so Bionic's accent is
     // still a stylesheet decision and not a colour computed in two places.
     this.root.dataset.bionicAccent = String(settings.bionicAccent);
+    // Read by the stylesheet, which is where the two axes actually meet: the
+    // mode says how a word is marked, this says whether the line moves.
+    this.root.dataset.motion = settings.motion;
     this.root.style.setProperty("--trf-font", stack);
     this.root.style.setProperty(
       "--trf-tracking",

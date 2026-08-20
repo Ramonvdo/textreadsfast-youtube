@@ -49,6 +49,7 @@ const PROFILE_FIELDS: Record<keyof ProfileSettings, true> = {
   customText: true,
   customFaded: true,
   customAccent: true,
+  motion: true,
   fontStyle: true,
   textCase: true,
   textWeight: true,
@@ -108,10 +109,16 @@ type Palette = Pick<
  */
 type Typography = Pick<
   ProfileSettings,
-  "fontStyle" | "textCase" | "textWeight" | "textOutline" | "lineWords"
+  | "motion"
+  | "fontStyle"
+  | "textCase"
+  | "textWeight"
+  | "textOutline"
+  | "lineWords"
 >;
 
 const PLAIN_TYPE: Typography = {
+  motion: DEFAULTS.motion,
   fontStyle: DEFAULTS.fontStyle,
   textCase: DEFAULTS.textCase,
   textWeight: DEFAULTS.textWeight,
@@ -196,11 +203,53 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       customText: "#303030",
       customFaded: "#babec4",
       customAccent: "#000000",
+      motion: "dynamic",
       fontStyle: "normal",
       textCase: "none",
       textWeight: 600,
       textOutline: 0,
       lineWords: 12,
+    },
+  },
+  {
+    id: "serif-static",
+    name: "Serif Static",
+    blurb: "Serif Flow held still — the same page, a whole line at a time.",
+    builtIn: true,
+    settings: {
+      mode: "bionic",
+      // The only difference from Serif Flow, and the reason motion is a setting
+      // rather than a mode: one combination, not a second renderer.
+      motion: "static",
+      theme: "custom",
+      font: "source_serif",
+      fontSize: 26,
+      letterSpacing: 0,
+      autoScale: true,
+      verticalPosition: 10,
+      boxWidth: 62,
+      // Not read while static, but kept sensible so switching this profile to
+      // dynamic lands on Serif Flow rather than on an empty window.
+      contextBefore: 5,
+      contextAfter: 5,
+      contextOpacity: 0.82,
+      bionicAccent: true,
+      backgroundOpacity: 0.88,
+      showPivotGuides: false,
+      removeFillers: true,
+      hideNativeCaptions: true,
+      readerInReadMode: true,
+      customBackground: "#f2f2f2",
+      customText: "#303030",
+      customFaded: "#babec4",
+      customAccent: "#000000",
+      fontStyle: "normal",
+      textCase: "none",
+      textWeight: 600,
+      textOutline: 0,
+      // Roughly a printed line. Long enough to be a thought, short enough that
+      // it does not wrap to three rows over the picture.
+      lineWords: 10,
     },
   },
   {
@@ -230,6 +279,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       customText: "#1a1a1a",
       customFaded: "#858585",
       customAccent: "#2f78e4",
+      motion: "dynamic",
       fontStyle: "normal",
       textCase: "none",
       textWeight: 700,
@@ -265,6 +315,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       customText: "#c9afd9",
       customFaded: "#a6a0a5",
       customAccent: "#9b80f9",
+      motion: "dynamic",
       fontStyle: "normal",
       textCase: "none",
       textWeight: 600,
@@ -296,6 +347,9 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       hideNativeCaptions: true,
       readerInReadMode: true,
       ...UNUSED_PALETTE,
+      // Static since before the setting existed: this profile is a held
+      // caption, and `plain` used to mean that on its own.
+      motion: "static",
       fontStyle: "normal",
       textCase: "none",
       textWeight: 700,
@@ -327,6 +381,7 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       hideNativeCaptions: true,
       readerInReadMode: true,
       ...UNUSED_PALETTE,
+      motion: "static",
       fontStyle: "italic",
       textCase: "none",
       textWeight: 400,

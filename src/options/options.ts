@@ -17,13 +17,16 @@ import { ProfileBar } from "./profileBar";
 import { mountAiSettings } from "./aiSettings";
 import { loadDevicePrefs, saveDevicePrefs } from "../settings";
 import { classify } from "../reader-core/words";
+import { readsWholeLine } from "../content/lines";
 import { FONT_LABELS, type ReaderFont } from "../reader-core/fonts";
 import {
   DEFAULTS,
   loadSettings,
   MODE_LABELS,
+  MOTION_LABELS,
   saveSettings,
   THEME_LABELS,
+  type Motion,
   type ReaderTheme,
   type ReadingMode,
   type Settings,
@@ -93,6 +96,17 @@ const FIELDS: Field[] = [
     options: (Object.keys(MODE_LABELS) as ReadingMode[]).map((value) => ({
       value,
       label: MODE_LABELS[value],
+    })),
+  },
+  {
+    kind: "select",
+    key: "motion",
+    group: "reading",
+    label: "Motion",
+    help: "Whether the line slides a word at a time or holds still and swaps a whole line at once. Static is far easier on the eyes over a long video. Read by Bionic and Plain; the one-word modes and Highlighter always slide.",
+    options: (Object.keys(MOTION_LABELS) as Motion[]).map((value) => ({
+      value,
+      label: MOTION_LABELS[value],
     })),
   },
   {
@@ -433,6 +447,10 @@ function row(field: Field, onChange: (value: unknown) => void): HTMLElement {
  * which makes them impossible to find — they are dimmed, the same treatment the
  * export-folder row gets when the save dialog is on.
  */
+/** The modes that read `motion` at all. Mirrors `readsWholeLine`. */
+const canHold = (mode: ReadingMode): boolean =>
+  mode === "plain" || mode === "bionic";
+
 function syncDependentControls(): void {
   const theme = document.getElementById("f-theme");
   if (theme instanceof HTMLSelectElement && theme.value !== settings.theme) {
@@ -450,13 +468,14 @@ function syncDependentControls(): void {
 
   for (const key of CUSTOM_COLOR_KEYS) dim(key, settings.theme !== "custom");
   dim("bionicAccent", settings.mode !== "bionic");
-  // Static mode builds its own line from the transcript's punctuation, so
-  // neither count is read at all.
-  const staticMode = settings.mode === "plain";
-  dim("contextBefore", staticMode);
-  dim("contextAfter", staticMode);
-  // The mirror image: line length is what static mode uses instead of them.
-  dim("lineWords", !staticMode);
+  // A held line is built from the transcript's punctuation, so neither count is
+  // read; line length is what it uses instead of them.
+  const held = readsWholeLine(settings);
+  dim("contextBefore", held);
+  dim("contextAfter", held);
+  dim("lineWords", !held);
+  // And motion itself means nothing to the four modes that cannot hold a line.
+  dim("motion", !canHold(settings.mode));
 }
 
 /** Autoscale sizes the text against the *player*, and the preview is not one —

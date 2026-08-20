@@ -13,7 +13,7 @@
  */
 
 import { ReaderOverlay } from "../content/overlay";
-import { buildLines } from "../content/lines";
+import { buildLines, readsWholeLine } from "../content/lines";
 import { classify } from "../reader-core/words";
 import { BUILT_IN_PROFILES } from "../profiles";
 import {
@@ -53,7 +53,7 @@ function profileSettings(id: string): Partial<Settings> {
  * actually does.
  */
 function viewFor(settings: Settings, index: number) {
-  if (settings.mode === "plain") {
+  if (readsWholeLine(settings)) {
     const lines = buildLines(WORDS, settings.lineWords);
     const line =
       lines.find((l) => index >= l.startIndex && index < l.endIndex) ??

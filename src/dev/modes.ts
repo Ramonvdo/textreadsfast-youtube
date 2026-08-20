@@ -10,7 +10,7 @@
  */
 
 import { ReaderOverlay } from "../content/overlay";
-import { buildLines } from "../content/lines";
+import { buildLines, readsWholeLine } from "../content/lines";
 import { BUILT_IN_PROFILES } from "../profiles";
 import { classify } from "../reader-core/words";
 import {
@@ -104,7 +104,7 @@ function panel(caption: string, settings: Partial<Settings>): HTMLElement {
    * real render loop would build for this moment.
    */
   overlay.render(
-    settings.mode === "plain"
+    readsWholeLine({ ...DEFAULTS, ...settings })
       ? staticView(settings.lineWords ?? LINES[0].words.length)
       : viewAt(AT),
   );
@@ -122,6 +122,14 @@ function panel(caption: string, settings: Partial<Settings>): HTMLElement {
  * one and a dark one exercise the derived `--edge` in both directions.
  */
 const CUSTOM_PANELS: Array<[string, Partial<Settings>]> = [
+  [
+    "Serif Flow — bionic, sliding",
+    { ...BUILT_IN("serif-flow"), autoScale: false, fontSize: 22 },
+  ],
+  [
+    "Serif Static — bionic, held still",
+    { ...BUILT_IN("serif-static"), autoScale: false, fontSize: 22 },
+  ],
   [
     "Lyric — gold italic on a blue band",
     { ...BUILT_IN("lyric"), autoScale: false, fontSize: 18 },
