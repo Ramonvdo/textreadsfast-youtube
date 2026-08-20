@@ -41,6 +41,16 @@ def main() -> None:
     ap.add_argument("source")
     ap.add_argument("name", help="output basename, written into store-assets/")
     ap.add_argument("--size", default="1280x800", help="1280x800, 640x400, 440x280, 1400x560")
+    ap.add_argument(
+        "--crop",
+        action="store_true",
+        help="fill the frame by trimming the long edge, instead of padding it",
+    )
+    ap.add_argument(
+        "--trim",
+        action="store_true",
+        help="strip a uniform border first, so padding is not spent on padding",
+    )
     args = ap.parse_args()
 
     width, height = (int(v) for v in args.size.lower().split("x"))
@@ -56,13 +66,44 @@ def main() -> None:
     else:
         src = src.convert("RGB")
 
-    scale = min(width / src.width, height / src.height)
-    # Never upscale past 1:1; a blown-up capture looks worse than a padded one.
-    scale = min(scale, 1.0)
-    fitted = src.resize((max(1, round(src.width * scale)), max(1, round(src.height * scale))), Image.LANCZOS)
+    if args.trim:
+        # A screen recording on a coloured backdrop is mostly backdrop. Cropping
+        # to what is actually different from the corner pixel lets the window
+        # itself fill the frame, which matters when the frame is 1280 wide and
+        # the recording is 2880.
+        bg = src.getpixel((0, 0))
+        mask = Image.new("L", src.size)
+        mask.putdata([0 if abs(r - bg[0]) + abs(g - bg[1]) + abs(b - bg[2]) < 40 else 255
+                      for r, g, b in src.getdata()])
+        box = mask.getbbox()
+        if box and (box[2] - box[0]) > src.width * 0.3 and (box[3] - box[1]) > src.height * 0.3:
+            src = src.crop(box)
 
-    canvas = Image.new("RGB", (width, height), edge_colour(src))
-    canvas.paste(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
+    if args.crop:
+        # Trim the long edge to the target ratio, then scale. Padding a 2:1
+        # screen recording into a 1.6:1 slot spends a fifth of the image on
+        # bars; cropping spends it on the recording instead.
+        want = width / height
+        have = src.width / src.height
+        if have > want:
+            keep = round(src.height * want)
+            left = (src.width - keep) // 2
+            src = src.crop((left, 0, left + keep, src.height))
+        elif have < want:
+            keep = round(src.width / want)
+            top = (src.height - keep) // 2
+            src = src.crop((0, top, src.width, top + keep))
+        canvas = src.resize((width, height), Image.LANCZOS)
+    else:
+        scale = min(width / src.width, height / src.height)
+        # Never upscale past 1:1; a blown-up capture looks worse than a padded one.
+        scale = min(scale, 1.0)
+        fitted = src.resize(
+            (max(1, round(src.width * scale)), max(1, round(src.height * scale))),
+            Image.LANCZOS,
+        )
+        canvas = Image.new("RGB", (width, height), edge_colour(src))
+        canvas.paste(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
 
     os.makedirs(OUT_DIR, exist_ok=True)
     out = os.path.join(OUT_DIR, f"{args.name}.png")
