@@ -20,6 +20,11 @@ dev-shots/
 # deleted. Back them up somewhere other than a fresh clone.
 PUBLISHING.md
 store-assets/
+
+# Frames lifted from the promo recording, used as backdrops for the listing
+# cards. Generated from a local video file and regenerable from it; kept out of
+# a public repository because they are stills of somebody else's video.
+src/dev/cardstock/
 video-viewer-concept.jpg
 AI-video-viewer-default-initial-summary-prompt.md
 __pycache__/

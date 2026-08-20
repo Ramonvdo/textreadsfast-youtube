@@ -36,6 +36,7 @@ const entries = {
         harness: "src/dev/harness.ts",
         modes: "src/dev/modes.ts",
         reel: "src/dev/reel.ts",
+        cards: "src/dev/cards.ts",
       }
     : {}),
 };
@@ -117,6 +118,11 @@ async function copyStatic() {
     );
     // The steppable one, which scripts/reel.py records into the README's GIFs.
     await cp(resolve(root, "src/dev/reel.html"), resolve(outdir, "reel.html"));
+    // The store listing cards, rendered by scripts/store-cards.py.
+    await cp(
+      resolve(root, "src/dev/cards.html"),
+      resolve(outdir, "cards.html"),
+    );
     await cp(resolve(root, "src/dev/fixtures"), resolve(outdir, "fixtures"), {
       recursive: true,
     });

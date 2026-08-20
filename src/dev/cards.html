@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Store cards</title>
+    <link rel="stylesheet" href="reader.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #0f1012;
+        color: #e8e6e3;
+        font-family: "Geist", system-ui, sans-serif;
+      }
+
+      /* The screenshot is the page; a scrollbar would be part of it. */
+      ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+      }
+
+      main {
+        width: 1280px;
+        height: 800px;
+        padding: 34px 40px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        /* A single warm wash from the accent, so the four cards read as a set
+           without any of them carrying a logo. */
+        background:
+          radial-gradient(90% 70% at 8% -10%, #2a1a15 0%, transparent 62%),
+          #0f1012;
+      }
+
+      header {
+        flex: none;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0 0 7px;
+        font-size: 33px;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        font-weight: 600;
+      }
+
+      header p {
+        margin: 0;
+        font-size: 15.5px;
+        line-height: 1.45;
+        color: #9a938a;
+        max-width: 62ch;
+      }
+
+      /* ── the mode and style cards ── */
+
+      .strip {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 236px 1fr;
+        align-items: center;
+        gap: 22px;
+        min-height: 0;
+        /* Separated, or six abutting stills read as one continuous image and
+           the rows stop being six separate answers to the same question. */
+        margin-bottom: 10px;
+      }
+
+      .strip:last-child {
+        margin-bottom: 0;
+      }
+
+      .label strong {
+        display: block;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .label span {
+        display: block;
+        font-size: 12.5px;
+        line-height: 1.35;
+        color: #8b847b;
+      }
+
+      /*
+       * Stands in for the player.
+       *
+       * A still from a real video rather than a gradient: the whole question a
+       * listing image answers is what this looks like over something moving,
+       * and a synthetic backdrop quietly dodges it.
+       */
+      .player {
+        position: relative;
+        height: 100%;
+        min-height: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        background-image: url("/src/dev/cardstock/plate.jpg");
+        background-size: cover;
+        background-position: center;
+      }
+
+      /* A scrim over the still. The captions are the subject; without this the
+         brickwork competes with them for every pixel, which is the opposite of
+         what the reader is for. */
+      .player::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          100deg,
+          rgba(10, 11, 13, 0.5),
+          rgba(10, 11, 13, 0.24)
+        );
+      }
+
+      /* ── the promo tiles ── */
+
+      main.tile,
+      main.marquee {
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+        gap: 0;
+      }
+
+      main.tile {
+        width: 440px;
+        height: 280px;
+      }
+
+      main.marquee {
+        width: 1400px;
+        height: 560px;
+      }
+
+      .promo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+      }
+
+      .promo-player {
+        position: relative;
+        width: 86%;
+      }
+
+      .promo--tile .promo-player {
+        height: 72px;
+      }
+
+      .promo--marquee .promo-player {
+        height: 122px;
+      }
+
+      /*
+       * The focal marks, scaled for a tile.
+       *
+       * In the product they are 1x8px, which is right over a video where the
+       * eye is inches away and they only need to be found once. On a 440px
+       * tile seen at a glance in a search result they would be invisible, and
+       * the one thing the tile exists to communicate would be lost. Scaled up,
+       * not invented: this is the same mark in the same place.
+       */
+      .promo .trf-guide {
+        width: 2px;
+      }
+
+      .promo--tile .trf-guide {
+        height: 11px;
+      }
+
+      .promo--marquee .trf-guide {
+        height: 22px;
+      }
+
+      .promo-words {
+        text-align: center;
+      }
+
+      .promo-words strong {
+        display: block;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .promo-words span {
+        display: block;
+        color: #9a938a;
+      }
+
+      .promo--tile .promo-words strong {
+        font-size: 25px;
+        margin-top: 18px;
+      }
+
+      .promo--tile .promo-words span {
+        font-size: 12px;
+        margin-top: 5px;
+      }
+
+      .promo--marquee .promo-words strong {
+        font-size: 58px;
+        margin-top: 34px;
+      }
+
+      .promo--marquee .promo-words span {
+        font-size: 22px;
+        margin-top: 10px;
+      }
+
+      /* ── the screenshot cards ── */
+
+      .plate {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .plate img {
+        min-height: 0;
+        max-width: 100%;
+        flex: 1;
+        object-fit: contain;
+        border-radius: 10px;
+        border: 1px solid #33353a;
+        /* Lifted off the background, so a light UI panel does not look like it
+           is floating in the middle of nothing. */
+        box-shadow: 0 18px 44px -18px rgba(0, 0, 0, 0.85);
+      }
+
+      .plate p {
+        flex: none;
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #9a938a;
+        max-width: 96ch;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="cards.js"></script>
+  </body>
+</html>
