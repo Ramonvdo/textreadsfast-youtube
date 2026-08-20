@@ -180,6 +180,26 @@
         height: 22px;
       }
 
+      /*
+       * No edge fade on a promo tile.
+       *
+       * In the product the mask means "the stream continues past here", which
+       * is true of a sliding window and false of a tile showing one complete
+       * sentence. Left on, it trims the end of the claim and reads as a bug.
+       */
+      .promo .trf-stage {
+        mask-image: none;
+        /* The stage clips as well as fades. Removing the fade alone still cut
+           the end off the sentence. */
+        overflow: visible;
+      }
+
+      /* The card's own padding is 40px across, which is a tenth of a 440px
+         tile. Trimmed here so the sentence has the room instead. */
+      .promo--tile .trf-reader {
+        padding: 10px 12px;
+      }
+
       .promo-words {
         text-align: center;
       }

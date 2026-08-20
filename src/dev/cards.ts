@@ -116,33 +116,48 @@ function promo(size: "tile" | "marquee"): HTMLElement[] {
   const player = el("div", "promo-player");
   wrap.append(player);
 
+  /*
+   * The tile says what the product does, in the product's own voice.
+   *
+   * "read" is the pinned word, so the sentence and the demonstration are the
+   * same object: the claim is legible, and the mechanism making the claim is
+   * visible in the middle of it.
+   */
+  const line = "I can read faster with this".split(" ").map(classify);
+  const pinned = 2; // "read"
+
   const overlay = new ReaderOverlay({
     ...DEFAULTS,
     mode: "rsvp",
     autoScale: false,
-    fontSize: size === "marquee" ? 62 : 30,
-    boxWidth: 92,
+    // The phrase is 27 characters. The marquee has room for it large; the tile
+    // is 440px wide and has to take it smaller or lose the ends to the mask.
+    // Sized so the whole sentence clears the card. RSVP pins the pivot at the
+    // centre, so the longer side decides: "faster with this" is three times the
+    // length of "I can", and it is that side which runs out of room first.
+    fontSize: size === "marquee" ? 44 : 16,
+    boxWidth: size === "marquee" ? 94 : 99,
     // Anchored to the bottom of a box sized to the card itself, so the tile has
     // no dead space between the reader and the wordmark under it.
     verticalPosition: 0,
-    contextBefore: 1,
-    contextAfter: 1,
+    contextBefore: pinned,
+    contextAfter: line.length - pinned - 1,
     // Bright enough that the neighbours are legible, dim enough that the
     // pinned word is unmistakably the one being read.
-    contextOpacity: 0.36,
+    contextOpacity: 0.38,
     showPivotGuides: true,
   });
   overlay.mount(player);
   overlay.render({
-    current: WORDS[AT],
-    previous: [WORDS[AT - 1]],
-    upcoming: [WORDS[AT + 1]],
+    current: line[pinned],
+    previous: line.slice(0, pinned),
+    upcoming: line.slice(pinned + 1),
   });
 
   const words = el("div", "promo-words");
   words.append(
     el("strong", undefined, "TextReadsFast"),
-    el("span", undefined, "One word at a time, pinned — so 2x actually works"),
+    el("span", undefined, "RSVP reading over YouTube captions"),
   );
   wrap.append(words);
 
