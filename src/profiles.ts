@@ -247,9 +247,10 @@ export const BUILT_IN_PROFILES: readonly Profile[] = [
       textCase: "none",
       textWeight: 600,
       textOutline: 0,
-      // Roughly a printed line. Long enough to be a thought, short enough that
-      // it does not wrap to three rows over the picture.
-      lineWords: 10,
+      // Short on purpose. A held line is taken in at a glance rather than
+      // scanned, and fewer words is what makes that possible; how many rows it
+      // occupies depends on the player's width, which is not ours to predict.
+      lineWords: 6,
     },
   },
   {
