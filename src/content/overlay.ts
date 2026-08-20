@@ -107,6 +107,19 @@ export class ReaderOverlay {
    *  overlays — a real hazard in a single-page app. */
   mount(player: HTMLElement): void {
     if (this.root.parentElement === player) return;
+
+    /*
+     * At most one reader per player, enforced rather than assumed.
+     *
+     * A leaked overlay does not merely look untidy: it keeps drawing, so the
+     * previous profile's card sits behind the current one and both sets of
+     * words are on screen at once. Whatever let it leak has by definition lost
+     * its reference to it, so this is the only place left that can clear it.
+     */
+    for (const stray of Array.from(player.querySelectorAll(".trf-reader"))) {
+      if (stray !== this.root) stray.remove();
+    }
+
     player.appendChild(this.root);
 
     // Watching the player covers fullscreen, theatre mode and plain window

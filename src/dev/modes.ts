@@ -124,11 +124,11 @@ function panel(caption: string, settings: Partial<Settings>): HTMLElement {
 const CUSTOM_PANELS: Array<[string, Partial<Settings>]> = [
   [
     "Lyric — gold italic on a blue band",
-    { ...BUILT_IN("lyric"), autoScale: false, fontSize: 21 },
+    { ...BUILT_IN("lyric"), autoScale: false, fontSize: 18 },
   ],
   [
-    "Caption Box — white on solid black",
-    { ...BUILT_IN("caption-box"), autoScale: false, fontSize: 26 },
+    "Black Box — white on solid black",
+    { ...BUILT_IN("black-box"), autoScale: false, fontSize: 22 },
   ],
   [
     "Custom — cool dark, low opacity",

@@ -3,7 +3,7 @@
  *
  * This is where profile switching actually wants to happen. The reason to change
  * profile is usually what is on screen right now — a bright talking head wants
- * Reading Room, a dark documentary wants Nocturne — and a settings page in
+ * Clarity Cold, a dark documentary wants Obsidian — and a settings page in
  * another tab is the wrong place to notice that.
  *
  * Applying a profile writes to `chrome.storage.sync`, which the content script

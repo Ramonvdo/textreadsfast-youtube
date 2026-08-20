@@ -206,6 +206,29 @@ function findPlayer(): { player: HTMLElement; video: HTMLVideoElement } | null {
   return player && video ? { player, video } : null;
 }
 
+/**
+ * Which attempt at building a session currently owns the reader.
+ *
+ * THE BUG THIS EXISTS FOR: switching profile mid-video left two readers stacked
+ * on the player, one drawing the old profile's card underneath the new one, and
+ * nothing could take the old one down again.
+ *
+ * `start()` guards on `session` and then awaits the transcript, which takes
+ * hundreds of milliseconds. `session` is still null for all of that time, so a
+ * second `start()` walked straight past the guard and both calls mounted an
+ * overlay. Only the last was stored, so `teardown()` had no reference left to
+ * destroy the first -- it stayed in the DOM with its own frame loop running.
+ *
+ * A profile switch is exactly what triggers it, because a profile that differs
+ * in `removeFillers` tears down and restarts, and `teardown()` is a no-op while
+ * the previous start is still in flight.
+ *
+ * Every start claims a number, and every start and teardown invalidates the
+ * ones before it. A start that was overtaken while awaiting stands down instead
+ * of mounting.
+ */
+let generation = 0;
+
 async function start(): Promise<void> {
   if (!settings.enabled) return;
   if (session) return; // already reading this video
@@ -217,7 +240,11 @@ async function start(): Promise<void> {
   watchAds(found.player);
   if (adShowing) return;
 
+  const mine = ++generation;
   const words = await collectWords();
+  // Overtaken while fetching the transcript, by another start or by a teardown.
+  // Mounting now would leave a second reader on the player forever.
+  if (mine !== generation) return;
   if (words.length === 0) return; // no captions: do nothing, quietly
 
   const usable = settings.removeFillers ? withoutFillers(words) : words;
@@ -380,6 +407,9 @@ function track(
 }
 
 function teardown(): void {
+  // Invalidates any start still waiting on its transcript, which is the case
+  // this has to handle: with no session yet, there is nothing else to stop.
+  generation += 1;
   session?.stop();
   session?.overlay.destroy();
   session = null;

@@ -98,25 +98,23 @@ on screen.
 </td>
 <td width="50%" align="center">
 
-<img src=".github/assets/profile-caption-box.gif" alt="The Caption Box profile" />
+<img src=".github/assets/profile-black-box.gif" alt="The Black Box profile" />
 
-**Caption Box** — white on solid black
+**Black Box** — white on solid black
 
 </td>
 </tr>
 </table>
 
-| Profile          | What it is for                                                   |
-| ---------------- | ---------------------------------------------------------------- |
-| **Default**      | One word at a fixed point, dark, a little context either side.   |
-| **Peripheral**   | Pinned word, bolded context. Focus and preview at once.          |
-| **Serif Flow**   | A whole line at once, serif on neutral grey. Reads like a page.  |
-| **Reading Room** | Light and warm, for daytime and bright video.                    |
-| **Night Study**  | Bionic on deep blue-grey, for a lecture in the dark.             |
-| **Sprint**       | Large, narrow, almost no context. For 2x and above.              |
-| **Highlighter**  | A block on the word being spoken. Holds up at speed.             |
-| **Lyric**        | Gold italic serif on a dark band, the width of the picture.      |
-| **Caption Box**  | White on solid black. The plainest, most legible thing there is. |
+| Profile          | What it is for                                                       |
+| ---------------- | -------------------------------------------------------------------- |
+| **Default**      | One word at a fixed point, dark, a little context either side.       |
+| **Peripheral**   | Pinned word with the preview bolded ahead of it, and nothing behind. |
+| **Serif Flow**   | A whole line at once, serif on warm light grey. Reads like a page.   |
+| **Clarity Cold** | Atkinson at full weight on cold light blue, with a blue pivot.       |
+| **Obsidian**     | A violet block on lilac, over near-black.                            |
+| **Black Box**    | White on solid black, a line at a time. Nothing moves.               |
+| **Lyric**        | Gold italic on a solid dark band, small and low in the frame.        |
 
 Ten palettes including a **Custom** one with four colour pickers, plus a slider
 for how much of the video shows through the card — down to none at all. On top

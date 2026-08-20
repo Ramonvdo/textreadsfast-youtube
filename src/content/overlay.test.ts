@@ -10,6 +10,16 @@ import {
   type Settings,
 } from "../settings";
 
+// jsdom has no ResizeObserver, and `mount` builds one to follow the player
+// through fullscreen and theatre mode. Only construction matters here.
+class StubResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+(globalThis as { ResizeObserver?: unknown }).ResizeObserver ??=
+  StubResizeObserver;
+
 const VIEW = {
   previous: ["the", "brain"].map(classify),
   current: classify("identifies"),
@@ -172,6 +182,42 @@ describe("mode dispatch", () => {
   it("falls back to RSVP for a mode from the future", () => {
     const { root } = mount({ mode: "hologram" as ReadingMode });
     expect(root.querySelector(".trf-pivot")).not.toBeNull();
+  });
+});
+
+describe("mounting", () => {
+  /*
+   * THE BUG THIS GUARDS: switching profile mid-video left two readers stacked
+   * on the player, the old one still drawing its own card underneath the new
+   * one. The root cause is fixed in `index.ts` -- `start()` could be entered
+   * twice while awaiting the transcript -- but whatever leaks an overlay has by
+   * definition lost its reference to it, so mounting is the only place left
+   * that can clear one.
+   */
+  it("evicts a reader that another overlay left behind", () => {
+    const player = document.createElement("div");
+    document.body.replaceChildren(player);
+
+    const abandoned = new ReaderOverlay({ ...DEFAULTS, theme: "paper" });
+    abandoned.mount(player);
+    expect(player.querySelectorAll(".trf-reader")).toHaveLength(1);
+
+    // A second overlay, mounted without the first ever being destroyed.
+    const replacement = new ReaderOverlay({ ...DEFAULTS, theme: "nocturne" });
+    replacement.mount(player);
+
+    const readers = player.querySelectorAll<HTMLElement>(".trf-reader");
+    expect(readers).toHaveLength(1);
+    expect(readers[0].dataset.theme).toBe("nocturne");
+  });
+
+  it("is idempotent for the overlay that is already there", () => {
+    const player = document.createElement("div");
+    document.body.replaceChildren(player);
+    const overlay = new ReaderOverlay({ ...DEFAULTS });
+    overlay.mount(player);
+    overlay.mount(player);
+    expect(player.querySelectorAll(".trf-reader")).toHaveLength(1);
   });
 });
 

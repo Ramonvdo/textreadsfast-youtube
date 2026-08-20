@@ -122,21 +122,21 @@ describe("applying a profile", () => {
   // read as a bug rather than as a theme change.
   it("leaves enabled and language alone", async () => {
     await chrome.storage.sync.set({ enabled: false, language: "nl" });
-    await applyProfile(byId("night-study"));
+    await applyProfile(byId("obsidian"));
     const settings = await loadSettings();
     expect(settings.enabled).toBe(false);
     expect(settings.language).toBe("nl");
   });
 
   it("records the profile as active", async () => {
-    await applyProfile(byId("sprint"));
-    expect((await loadProfiles()).activeId).toBe("sprint");
+    await applyProfile(byId("black-box"));
+    expect((await loadProfiles()).activeId).toBe("black-box");
   });
 });
 
 describe("modification tracking", () => {
   it("is false straight after applying, true after one change", async () => {
-    const preset = byId("reading-room");
+    const preset = byId("clarity-cold");
     await applyProfile(preset);
 
     const applied = await loadSettings();
@@ -147,7 +147,7 @@ describe("modification tracking", () => {
   });
 
   it("ignores the keys a profile does not own", async () => {
-    const preset = byId("night-study");
+    const preset = byId("obsidian");
     await applyProfile(preset);
     const applied = await loadSettings();
     expect(
