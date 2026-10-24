@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReaderOverlay } from "./overlay";
 import { classify } from "../reader-core/words";
 import {
@@ -183,6 +183,34 @@ describe("mode dispatch", () => {
     const { root } = mount({ mode: "hologram" as ReadingMode });
     expect(root.querySelector(".trf-pivot")).not.toBeNull();
   });
+});
+
+describe("Han alignment", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each([
+    ["中文", 0],
+    ["𠀀好", 0],
+    ["𠀀好", 6],
+  ])(
+    "uses rendered glyph widths for %s with %ipx tracking",
+    (text, spacing) => {
+      vi.spyOn(
+        HTMLElement.prototype,
+        "getBoundingClientRect",
+      ).mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains("trf-pivot")
+          ? new DOMRect(120, 0, 22 + spacing, 30)
+          : new DOMRect(100, 0, 40, 30);
+      });
+      const { root, overlay } = mount({ letterSpacing: spacing });
+      overlay.render({ ...VIEW, current: classify(text) });
+      const style = root.querySelector<HTMLElement>(".trf-stage")!.style;
+      expect(style.getPropertyValue("--trf-pivot-offset")).toBe("-31px");
+      expect(style.getPropertyValue("--trf-word-left")).toBe("-31px");
+      expect(style.getPropertyValue("--trf-word-right")).toBe("9px");
+    },
+  );
 });
 
 describe("mounting", () => {
