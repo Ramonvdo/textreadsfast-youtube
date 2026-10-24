@@ -96,6 +96,9 @@ window.addEventListener("message", (event: MessageEvent) => {
   };
   if (data?.channel !== CHANNEL) return;
 
+  // Captions can beat navigation; reset before accepting the new transcript.
+  onNavigate();
+
   if (data.kind === "tracks") {
     const mine = (data.payload as CaptionTrack[]).filter((t) =>
       belongsToCurrentVideo(t.baseUrl),
@@ -230,22 +233,15 @@ function findPlayer(): { player: HTMLElement; video: HTMLVideoElement } | null {
 let generation = 0;
 
 async function start(): Promise<void> {
-  if (!settings.enabled) return;
-  if (session) return; // already reading this video
-  const found = findPlayer();
-  if (!found) return;
-
-  // Attached even when the start is about to be refused: the ad ending is the
-  // only signal that will bring us back, since the URL never changed.
-  watchAds(found.player);
-  if (adShowing) return;
-
+  if (!settings.enabled || session) return;
   const mine = ++generation;
   const words = await collectWords();
-  // Overtaken while fetching the transcript, by another start or by a teardown.
-  // Mounting now would leave a second reader on the player forever.
-  if (mine !== generation) return;
-  if (words.length === 0) return; // no captions: do nothing, quietly
+  // Navigation can replace the player while captions load. Use the current one,
+  // and reject any attempt overtaken by another start, teardown or navigation.
+  const found = findPlayer();
+  if (!found || mine !== generation || currentVideoId !== videoIdOf()) return;
+  watchAds(found.player);
+  if (mine !== generation || adShowing || words.length === 0) return;
 
   const usable = settings.removeFillers ? withoutFillers(words) : words;
   const overlay = new ReaderOverlay(settings);
@@ -506,8 +502,8 @@ function onNavigate(): void {
   // teardown covers, since Read Mode owns the player and the page cover.
   if (isReadModeOpen()) void closeReadMode();
   if (id) {
-    // The player response is not ready the instant navigation fires; the page
-    // script re-publishes shortly after, which starts us properly.
+    // The player can lag navigation; ask again with the bridge's retries.
+    requestRescan();
     awaitPlayer();
   }
 }
