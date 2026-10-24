@@ -46,8 +46,7 @@ function adShowing(): boolean {
 }
 
 function readTracks(): CaptionTrack[] {
-  // The player response moves around between YouTube revisions, so try the
-  // documented spot and then the player object, rather than assuming either.
+  // The initial response survives navigation, so prefer the live player.
   const candidates: unknown[] = [
     (window as { ytInitialPlayerResponse?: unknown }).ytInitialPlayerResponse,
   ];
@@ -55,22 +54,24 @@ function readTracks(): CaptionTrack[] {
   const player = document.querySelector<
     HTMLElement & { getPlayerResponse?: () => unknown }
   >("#movie_player");
-  if (typeof player?.getPlayerResponse === "function") {
-    try {
-      candidates.push(player.getPlayerResponse());
-    } catch {
-      // The player exists but is not ready; the network hook still covers us.
-    }
+  try {
+    candidates.unshift(player?.getPlayerResponse?.());
+  } catch {
+    // The player exists but is not ready; the network hook still covers us.
   }
 
+  const current = currentVideoId();
   for (const candidate of candidates) {
-    const tracks = (
-      candidate as {
-        captions?: {
-          playerCaptionsTracklistRenderer?: { captionTracks?: CaptionTrack[] };
-        };
-      }
-    )?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+    const response = candidate as {
+      videoDetails?: { videoId?: string };
+      captions?: {
+        playerCaptionsTracklistRenderer?: { captionTracks?: CaptionTrack[] };
+      };
+    };
+    const id = response?.videoDetails?.videoId;
+    if (id && current && id !== current) continue;
+    const tracks =
+      response?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
     if (Array.isArray(tracks) && tracks.length > 0) return tracks;
   }
   return [];
