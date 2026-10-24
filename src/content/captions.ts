@@ -42,6 +42,30 @@ export function captionVideoId(url: string): string | null {
 /** Cues shorter than this are dropped: they are usually markup artefacts. */
 const MIN_WORD_MS = 40;
 
+const chineseSegmenter = new Intl.Segmenter("zh-Hans", {
+  granularity: "word",
+});
+
+function splitCaptionWords(text: string): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+
+  /* Han captions often have no spaces to mark word boundaries. */
+  if (!/\p{Script=Han}/u.test(clean)) return clean.split(" ");
+
+  /* Punctuation belongs on a word, not in a frame of its own. */
+  const words = [""];
+  let wordSeen = false;
+  for (const { segment, isWordLike } of chineseSegmenter.segment(clean)) {
+    if (!segment.trim()) continue;
+    if (isWordLike && wordSeen) words.push("");
+    words[words.length - 1] += segment;
+    if (isWordLike) wordSeen = true;
+  }
+
+  return wordSeen ? words : [];
+}
+
 /* ── json3 ──────────────────────────────────────────────────────────────── */
 
 interface Json3Seg {
@@ -86,12 +110,10 @@ export function parseJson3(body: string): TimedWord[] {
     const eventStart = event.tStartMs ?? 0;
     const eventEnd = eventStart + (event.dDurationMs ?? 0);
 
-    for (const seg of event.segs) {
-      const text = (seg.utf8 ?? "").replace(/\s+/g, " ").trim();
-      if (!text) continue;
-
+    for (const [index, seg] of event.segs.entries()) {
+      const pieces = splitCaptionWords(seg.utf8 ?? "");
+      if (pieces.length === 0) continue;
       const segStart = eventStart + (seg.tOffsetMs ?? 0);
-      const pieces = text.split(" ").filter(Boolean);
 
       if (pieces.length === 1) {
         words.push({
@@ -106,7 +128,21 @@ export function parseJson3(body: string): TimedWord[] {
       // out by character count. Longer words get proportionally longer, which
       // is closer to speech than splitting the time evenly.
       const total = pieces.reduce((sum, p) => sum + p.length, 0);
-      const span = Math.max(eventEnd - segStart, pieces.length * MIN_WORD_MS);
+      // A segment can contain several words even on a timed track. Letting it
+      // run to the cue's end would interleave them with the next segment.
+      const next = event.segs
+        .slice(index + 1)
+        .find(
+          (s) => (s.tOffsetMs ?? 0) > (seg.tOffsetMs ?? 0) && s.utf8?.trim(),
+        );
+      const segEnd = Math.min(
+        eventEnd,
+        eventStart + (next?.tOffsetMs ?? Infinity),
+      );
+      const span = Math.max(
+        segEnd - segStart,
+        next ? 0 : pieces.length * MIN_WORD_MS,
+      );
       let cursor = segStart;
       for (const piece of pieces) {
         const share = (piece.length / total) * span;
@@ -149,11 +185,7 @@ export function parseXml(body: string): TimedWord[] {
       node.textContent ?? "",
       "text/html",
     ).documentElement.textContent;
-    const pieces = (decoded ?? "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .split(" ")
-      .filter(Boolean);
+    const pieces = splitCaptionWords(decoded ?? "");
     if (pieces.length === 0) continue;
 
     const total = pieces.reduce((sum, p) => sum + p.length, 0);
