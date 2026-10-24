@@ -345,9 +345,10 @@ export class ReaderOverlay {
       document.createTextNode(after),
     );
 
-    // Monospace lands the pivot exactly using `ch` units; a proportional face
-    // needs the glyph measured.
-    const mono = isMonospace(this.settings.font);
+    // Monospace lands the pivot exactly in `ch` units, except for Han fallback
+    // glyphs: those need measuring just like a proportional face.
+    const mono =
+      isMonospace(this.settings.font) && !/\p{Script=Han}/u.test(text);
     /*
      * Style and weight belong in the string, not just size and family.
      *
