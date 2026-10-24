@@ -11,11 +11,10 @@
 
 import { splitAtOrp } from "../reader-core/orp";
 import {
-  pivotOffsetCh,
-  pivotOffsetPx,
   wordExtentCh,
   wordExtentPx,
   clearPivotCache,
+  type WordExtent,
 } from "../reader-core/pivotOffset";
 import { FONT_STACKS, isMonospace } from "../reader-core/fonts";
 import type { Word } from "../reader-core/words";
@@ -338,17 +337,17 @@ export class ReaderOverlay {
   private renderRsvp(view: ReaderView, bionicContext: boolean): void {
     const text = view.current!.text;
     const { before, pivot, after } = splitAtOrp(text);
+    const pivotEl = pivotSpan(pivot);
 
     this.wordEl.replaceChildren(
       document.createTextNode(before),
-      pivotSpan(pivot),
+      pivotEl,
       document.createTextNode(after),
     );
 
-    // Monospace lands the pivot exactly in `ch` units, except for Han fallback
-    // glyphs: those need measuring just like a proportional face.
-    const mono =
-      isMonospace(this.settings.font) && !/\p{Script=Han}/u.test(text);
+    // Han fallback glyphs do not inherit monospace widths.
+    const han = /\p{Script=Han}/u.test(text);
+    const mono = isMonospace(this.settings.font) && !han;
     /*
      * Style and weight belong in the string, not just size and family.
      *
@@ -362,18 +361,23 @@ export class ReaderOverlay {
     ).toFixed(2)}px ${FONT_STACKS[this.settings.font]}`;
     const spacing = this.settings.letterSpacing;
 
-    const offset = mono
-      ? pivotOffsetCh(text)
-      : pivotOffsetPx(text, cssFont, spacing);
     // Context words are placed against the focus word's real edges. Anchoring
     // them a fixed distance from the focal column instead lets a long word run
     // straight over them, which is what turned "brain uses to" into a pile-up.
-    const extent = mono
-      ? wordExtentCh(text)
-      : wordExtentPx(text, cssFont, spacing);
+    // Canvas and the DOM can disagree on Han fallback widths. Use the rendered
+    // glyph when layout is available; its box includes trailing letter-spacing.
+    const box = han ? this.wordEl.getBoundingClientRect() : null;
+    let extent: WordExtent;
+    if (box?.width) {
+      const glyph = pivotEl.getBoundingClientRect();
+      const left = box.left - glyph.left - (glyph.width - spacing) / 2;
+      extent = { left, right: left + box.width };
+    } else {
+      extent = mono ? wordExtentCh(text) : wordExtentPx(text, cssFont, spacing);
+    }
     const unit = mono ? "ch" : "px";
 
-    this.stage.style.setProperty("--trf-pivot-offset", `${offset}${unit}`);
+    this.stage.style.setProperty("--trf-pivot-offset", `${extent.left}${unit}`);
     this.stage.style.setProperty("--trf-word-left", `${extent.left}${unit}`);
     this.stage.style.setProperty("--trf-word-right", `${extent.right}${unit}`);
 
