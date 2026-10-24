@@ -47,7 +47,11 @@ const chineseSegmenter = new Intl.Segmenter("zh-Hans", {
 });
 
 function splitCaptionWords(text: string): string[] {
-  const clean = text.replace(/\s+/g, " ").trim();
+  const clean = text
+    .replace(/^\s*>>\s*/, "")
+    .replace(/\s+/g, " ")
+    .replace(/ ([।॥])/g, "$1")
+    .trim();
   if (!clean) return [];
 
   /* Han captions often have no spaces to mark word boundaries. */
@@ -64,6 +68,13 @@ function splitCaptionWords(text: string): string[] {
   }
 
   return wordSeen ? words : [];
+}
+
+function captionWord(text: string): Word {
+  const word = classify(text);
+  // Danda ends a Hindi or Bengali sentence just as a full stop does.
+  word.endsSentence ||= /[।॥]["'”’)\]]*$/u.test(text);
+  return word;
 }
 
 /* ── json3 ──────────────────────────────────────────────────────────────── */
@@ -109,15 +120,21 @@ export function parseJson3(body: string): TimedWord[] {
 
     const eventStart = event.tStartMs ?? 0;
     const eventEnd = eventStart + (event.dDurationMs ?? 0);
+    // Untimed segments are formatting fragments, not simultaneous words.
+    const segs = event.segs.some(
+      (s) => (s.tOffsetMs ?? 0) > 0 && s.utf8?.trim(),
+    )
+      ? event.segs
+      : [{ utf8: event.segs.map((s) => s.utf8 ?? "").join("") }];
 
-    for (const [index, seg] of event.segs.entries()) {
+    for (const [index, seg] of segs.entries()) {
       const pieces = splitCaptionWords(seg.utf8 ?? "");
       if (pieces.length === 0) continue;
       const segStart = eventStart + (seg.tOffsetMs ?? 0);
 
       if (pieces.length === 1) {
         words.push({
-          word: classify(pieces[0]),
+          word: captionWord(pieces[0]),
           startMs: segStart,
           endMs: eventEnd,
         });
@@ -130,7 +147,7 @@ export function parseJson3(body: string): TimedWord[] {
       const total = pieces.reduce((sum, p) => sum + p.length, 0);
       // A segment can contain several words even on a timed track. Letting it
       // run to the cue's end would interleave them with the next segment.
-      const next = event.segs
+      const next = segs
         .slice(index + 1)
         .find(
           (s) => (s.tOffsetMs ?? 0) > (seg.tOffsetMs ?? 0) && s.utf8?.trim(),
@@ -141,13 +158,13 @@ export function parseJson3(body: string): TimedWord[] {
       );
       const span = Math.max(
         segEnd - segStart,
-        next ? 0 : pieces.length * MIN_WORD_MS,
+        next || eventEnd > eventStart ? 0 : pieces.length * MIN_WORD_MS,
       );
       let cursor = segStart;
       for (const piece of pieces) {
         const share = (piece.length / total) * span;
         words.push({
-          word: classify(piece),
+          word: captionWord(piece),
           startMs: cursor,
           endMs: cursor + share,
         });
@@ -189,12 +206,15 @@ export function parseXml(body: string): TimedWord[] {
     if (pieces.length === 0) continue;
 
     const total = pieces.reduce((sum, p) => sum + p.length, 0);
-    const span = Math.max(duration, pieces.length * MIN_WORD_MS);
+    const span = Math.max(
+      duration,
+      duration > 0 ? 0 : pieces.length * MIN_WORD_MS,
+    );
     let cursor = start;
     for (const piece of pieces) {
       const share = (piece.length / total) * span;
       words.push({
-        word: classify(piece),
+        word: captionWord(piece),
         startMs: cursor,
         endMs: cursor + share,
       });
