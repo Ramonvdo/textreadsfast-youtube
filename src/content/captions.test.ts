@@ -1,7 +1,9 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import {
   captionVideoId,
   parseJson3,
+  parseXml,
   parseCaptions,
   pickTrack,
   wordAt,
@@ -25,11 +27,10 @@ const asr = JSON.stringify({
 });
 
 /** Manually uploaded tracks: a whole phrase in one segment, no word timing. */
-const manual = JSON.stringify({
-  events: [
-    { tStartMs: 0, dDurationMs: 1200, segs: [{ utf8: "one two three" }] },
-  ],
-});
+const manual = (text = "one two three") =>
+  JSON.stringify({
+    events: [{ tStartMs: 0, dDurationMs: 1200, segs: [{ utf8: text }] }],
+  });
 
 describe("json3 captions", () => {
   it("uses per-word offsets when the track provides them", () => {
@@ -42,7 +43,7 @@ describe("json3 captions", () => {
   });
 
   it("interpolates a phrase that has no per-word timing", () => {
-    const words = parseJson3(manual);
+    const words = parseJson3(manual());
     expect(words.map((w) => w.word.text)).toEqual(["one", "two", "three"]);
     expect(words[0].startMs).toBe(0);
     // Monotonic, inside the cue, and each word gets non-zero time.
@@ -111,6 +112,59 @@ describe("json3 captions", () => {
       ],
     });
     expect(parseJson3(noisy).map((w) => w.word.text)).toEqual(["real"]);
+  });
+
+  it.each([
+    ["我喜欢中文。", ["我", "喜欢", "中文。"]],
+    ["我喜歡中文。", ["我", "喜歡", "中文。"]],
+    ["“你好，世界。”", ["“你好，", "世界。”"]],
+    ["我喜欢 TextReadsFast。", ["我", "喜欢", "TextReadsFast。"]],
+    ["  Don't\nre-split\twords!  ", ["Don't", "re-split", "words!"]],
+  ])("splits caption words: %s", (text, expected) => {
+    expect(parseJson3(manual(text)).map((w) => w.word.text)).toEqual(expected);
+  });
+
+  it.each([80, 1000])(
+    "fits a Chinese phrase before the next segment at %ims",
+    (nextOffset) => {
+      const timed = JSON.stringify({
+        events: [
+          {
+            tStartMs: 1000,
+            dDurationMs: 2000,
+            segs: [
+              { utf8: "我喜欢中文", tOffsetMs: 0 },
+              { utf8: "\n", tOffsetMs: 40 },
+              { utf8: " " },
+              { utf8: "然后学习", tOffsetMs: nextOffset },
+            ],
+          },
+        ],
+      });
+      const words = parseJson3(timed);
+      expect(words.map((w) => w.word.text)).toEqual([
+        "我",
+        "喜欢",
+        "中文",
+        "然后",
+        "学习",
+      ]);
+      expect(words[0].startMs).toBe(1000);
+      expect(words[2].endMs).toBeCloseTo(1000 + nextOffset);
+      expect(words[3].startMs).toBe(1000 + nextOffset);
+      expect(words[4].endMs).toBeCloseTo(3000);
+    },
+  );
+});
+
+describe("XML captions", () => {
+  it("segments Chinese after decoding entities and normalising whitespace", () => {
+    const words = parseXml(
+      '<transcript><text start="1" dur="1.2">  &amp;quot;我\n喜欢\t中文。&amp;quot;  </text></transcript>',
+    );
+    expect(words.map((w) => w.word.text)).toEqual(['"我', "喜欢", '中文。"']);
+    expect(words.map((w) => w.startMs)).toEqual([1000, 1300, 1600]);
+    expect(words[2].endMs).toBe(2200);
   });
 });
 
