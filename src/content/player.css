@@ -1,0 +1,60 @@
+.trf-player-toggle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto !important;
+  padding: 0 8px !important;
+  color: #eee;
+  font:
+    600 11px/1 system-ui,
+    sans-serif !important;
+}
+
+.trf-player-toggle .trf-switch-track {
+  position: relative;
+  width: 25px;
+  height: 14px;
+  border-radius: 8px;
+  background: #555;
+}
+
+.trf-player-toggle .trf-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #eee;
+}
+
+.trf-player-toggle[aria-checked="true"] .trf-switch-track {
+  background: #b54b32;
+}
+
+.trf-player-toggle[aria-checked="true"] .trf-switch-track::after {
+  left: 13px;
+}
+
+.trf-player-toggle.trf-player-toggle--floating {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 70;
+  height: 28px;
+  border-radius: 3px;
+  background: #111c;
+}
+
+.trf-player-toggle:focus-visible {
+  outline: 2px solid #eee;
+  outline-offset: -2px;
+}
+
+#movie_player.trf-focus-fullscreen.ytp-autohide
+  .trf-player-toggle--floating:not(:focus-visible) {
+  opacity: 0;
+  pointer-events: none;
+}
