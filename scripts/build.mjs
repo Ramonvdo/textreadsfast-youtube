@@ -52,13 +52,19 @@ async function buildCss() {
     resolve(root, "src/reader-core/fonts.css"),
     "utf8",
   );
+  // The player switch sits in YouTube's control bar, outside `.trf-reader`, so
+  // its rules live apart but ship in the same content-script stylesheet.
+  const player = await readFile(
+    resolve(root, "src/content/player.css"),
+    "utf8",
+  );
   // `/fonts/x.woff2` is correct for the desktop app's web root; inside an
   // extension the same path must be relative so Chrome resolves it against the
   // package. Rewritten here so the shared file stays byte-identical upstream.
   const scoped = fonts.replace(/url\("\/fonts\//g, 'url("fonts/');
   await writeFile(
     resolve(outdir, "reader.css"),
-    `${scoped}\n\n${reader}`,
+    `${scoped}\n\n${reader}\n\n${player}`,
     "utf8",
   );
 

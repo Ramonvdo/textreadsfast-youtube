@@ -347,6 +347,7 @@ const FIELDS: Field[] = [
       { value: "de", label: "Deutsch" },
       { value: "fr", label: "Français" },
       { value: "es", label: "Español" },
+      { value: "zh", label: "中文" },
     ],
   },
 ];

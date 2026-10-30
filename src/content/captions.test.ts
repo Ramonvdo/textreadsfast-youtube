@@ -33,6 +33,25 @@ const manual = (text = "one two three") =>
   });
 
 describe("json3 captions", () => {
+  it("does not give a speaker-change marker any of the word's time", () => {
+    const words = parseJson3(
+      JSON.stringify({
+        events: [
+          {
+            tStartMs: 629440,
+            dDurationMs: 4320,
+            segs: [
+              { utf8: ">> শ্বেতকালি" },
+              { utf8: " শ্বেতকালি", tOffsetMs: 800 },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(words.map((w) => w.word.text)).toEqual(["শ্বেতকালি", "শ্বেতকালি"]);
+    expect(words.map((w) => w.startMs)).toEqual([629440, 630240]);
+  });
+
   it("uses per-word offsets when the track provides them", () => {
     const words = parseJson3(asr);
     expect(words.map((w) => w.word.text)).toEqual(["Hello", "there", "friend"]);
@@ -52,6 +71,57 @@ describe("json3 captions", () => {
       expect(words[i].endMs).toBeGreaterThan(words[i].startMs);
     }
     expect(words[words.length - 1].endMs).toBeLessThanOrEqual(1201);
+  });
+
+  it.each([undefined, 0])(
+    "joins formatting fragments with offset %s before sharing cue time",
+    (tOffsetMs) => {
+      const fragmented = JSON.stringify({
+        events: [
+          {
+            tStartMs: 1000,
+            dDurationMs: 1200,
+            segs: [
+              { utf8: "one t", tOffsetMs },
+              { utf8: "wo three", tOffsetMs },
+              { utf8: "\n", tOffsetMs: 100 },
+            ],
+          },
+        ],
+      });
+      const words = parseJson3(fragmented);
+      expect(words.map((w) => w.word.text)).toEqual(["one", "two", "three"]);
+      expect(words.map((w) => w.startMs)).toEqual([
+        1000,
+        1000 + (3 / 11) * 1200,
+        1000 + (6 / 11) * 1200,
+      ]);
+      expect(words[2].endMs).toBeCloseTo(2200);
+    },
+  );
+
+  it("does not stretch a short cue into the next cue", () => {
+    const short = JSON.stringify({
+      events: [
+        {
+          tStartMs: 1000,
+          dDurationMs: 40,
+          segs: [{ utf8: "one two three four" }],
+        },
+        { tStartMs: 1040, dDurationMs: 1000, segs: [{ utf8: "next" }] },
+      ],
+    });
+    const words = parseJson3(short);
+    expect(words.map((w) => w.word.text)).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+      "next",
+    ]);
+    expect(words[0].startMs).toBe(1000);
+    expect(words[3].endMs).toBeCloseTo(1040);
+    expect(words[4].startMs).toBe(1040);
   });
 
   it("drops the rolling duplicates auto-captions emit", () => {
@@ -120,6 +190,8 @@ describe("json3 captions", () => {
     ["“你好，世界。”", ["“你好，", "世界。”"]],
     ["我喜欢 TextReadsFast。", ["我", "喜欢", "TextReadsFast。"]],
     ["  Don't\nre-split\twords!  ", ["Don't", "re-split", "words!"]],
+    ["मैं हिन्दी सीखता हूँ।", ["मैं", "हिन्दी", "सीखता", "हूँ।"]],
+    ["আমি বাংলা শিখি।", ["আমি", "বাংলা", "শিখি।"]],
   ])("splits caption words: %s", (text, expected) => {
     expect(parseJson3(manual(text)).map((w) => w.word.text)).toEqual(expected);
   });
@@ -166,6 +238,45 @@ describe("XML captions", () => {
     expect(words.map((w) => w.startMs)).toEqual([1000, 1300, 1600]);
     expect(words[2].endMs).toBe(2200);
   });
+
+  it("keeps short phrases inside their stated cue duration", () => {
+    const words = parseXml(
+      '<transcript><text start="1" dur="0.04">one two three four</text><text start="1.04" dur="1">next</text></transcript>',
+    );
+    expect(words.map((w) => w.word.text)).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+      "next",
+    ]);
+    expect(words[0].startMs).toBe(1000);
+    expect(words[3].endMs).toBeCloseTo(1040);
+    expect(words[4].startMs).toBe(1040);
+  });
+});
+
+describe("Indic captions", () => {
+  it.each(["यह ठीक है । अब चलो ॥", "আমি ভালো আছি । তুমি এসো ॥"])(
+    "keeps danda with its word and ends the sentence: %s",
+    (text) => {
+      const json = parseJson3(manual(text));
+      const xml = parseXml(
+        `<transcript><text start="0" dur="1.2">${text}</text></transcript>`,
+      );
+      expect(xml).toEqual(json);
+      expect(json).toHaveLength(5);
+      expect(json.map((w) => w.word.endsSentence)).toEqual([
+        false,
+        false,
+        true,
+        false,
+        true,
+      ]);
+      expect(json[2].word.text.endsWith("।")).toBe(true);
+      expect(json[4].word.text.endsWith("॥")).toBe(true);
+    },
+  );
 });
 
 describe("format detection", () => {
@@ -211,6 +322,17 @@ describe("choosing a track", () => {
         ?.languageCode,
     ).toBe("pt-BR");
   });
+
+  it.each(["hi-IN", "bn-BD"])(
+    "selects the preferred Indic track: %s",
+    (code) => {
+      const chosen = pickTrack(
+        [track("en", false), track(code, true)],
+        code.slice(0, 2),
+      );
+      expect(chosen?.languageCode).toBe(code);
+    },
+  );
 });
 
 describe("finding the current word", () => {
