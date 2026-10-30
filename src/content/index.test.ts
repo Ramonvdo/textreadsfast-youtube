@@ -95,3 +95,15 @@ describe("turning the reader off from the player", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
   });
 });
+
+describe("YouTube's own captions", () => {
+  // This video has no captions, so no reader ever mounts. Hiding YouTube's
+  // captions here would leave the viewer with nothing at all.
+  it("stay visible after a settings change while no reader is showing", async () => {
+    await fake.chrome.storage.sync.set({ hideNativeCaptions: true });
+    await settle();
+    expect(document.documentElement.classList.contains("trf-hide-native")).toBe(
+      false,
+    );
+  });
+});

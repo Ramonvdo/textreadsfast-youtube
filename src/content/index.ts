@@ -695,9 +695,11 @@ async function init(): Promise<void> {
     // them. Without this the change waits for the next presented frame, and a
     // paused video never presents one.
     session?.redraw();
+    // Only while a reader is showing: with none, hiding YouTube's captions
+    // would leave the viewer with nothing. `start()` sets it when one mounts.
     document.documentElement.classList.toggle(
       "trf-hide-native",
-      next.hideNativeCaptions,
+      !!session && next.hideNativeCaptions,
     );
   });
 
