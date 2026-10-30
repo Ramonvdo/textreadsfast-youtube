@@ -38,23 +38,7 @@
   left: 13px;
 }
 
-.trf-player-toggle.trf-player-toggle--floating {
-  position: absolute;
-  bottom: 12px;
-  left: 12px;
-  z-index: 70;
-  height: 28px;
-  border-radius: 3px;
-  background: #111c;
-}
-
 .trf-player-toggle:focus-visible {
   outline: 2px solid #eee;
   outline-offset: -2px;
-}
-
-#movie_player.trf-focus-fullscreen.ytp-autohide
-  .trf-player-toggle--floating:not(:focus-visible) {
-  opacity: 0;
-  pointer-events: none;
 }

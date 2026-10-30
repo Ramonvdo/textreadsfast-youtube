@@ -42,23 +42,19 @@ describe("player toggle", () => {
     expect(controls.firstElementChild).toBe(button);
     expect(controls.contains(native)).toBe(true);
     expect(player.querySelectorAll(".trf-player-toggle")).toHaveLength(1);
-    expect(button.classList.contains("trf-player-toggle--floating")).toBe(
-      false,
-    );
     expect(button.type).toBe("button");
     expect(button.getAttribute("role")).toBe("switch");
     expect(button.getAttribute("aria-label")).toBe("TextReadsFast captions");
   });
 
-  it("floats until a late control bar appears, then moves into it", async () => {
-    const { player, controls, button } = mount(false);
-    expect(button.parentElement).toBe(player);
-    expect(button.classList.contains("trf-player-toggle--floating")).toBe(true);
+  // Nothing may sit on the picture: a floating fallback would cost a click.
+  it("waits for a late control bar instead of floating over the video", async () => {
+    const { player, controls } = mount(false);
+    expect(player.querySelector(".trf-player-toggle")).toBeNull();
     await mutate(player, () => player.append(controls));
-    expect(button.parentElement).toBe(controls);
-    expect(button.classList.contains("trf-player-toggle--floating")).toBe(
-      false,
-    );
+    expect(
+      controls.firstElementChild?.classList.contains("trf-player-toggle"),
+    ).toBe(true);
     expect(player.querySelectorAll(".trf-player-toggle")).toHaveLength(1);
   });
 
@@ -72,8 +68,7 @@ describe("player toggle", () => {
     expect(button.parentElement).toBe(replacement);
     expect(player.querySelectorAll(".trf-player-toggle")).toHaveLength(1);
     await mutate(player, () => replacement.remove());
-    expect(button.parentElement).toBe(player);
-    expect(button.classList.contains("trf-player-toggle--floating")).toBe(true);
+    expect(player.querySelector(".trf-player-toggle")).toBeNull();
   });
 
   it("reflects enabled state and keeps clicks and keys out of playback", () => {

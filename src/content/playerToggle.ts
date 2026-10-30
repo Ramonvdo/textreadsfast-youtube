@@ -40,10 +40,10 @@ export class PlayerToggle {
   }
 
   private mount(): void {
+    // Only ever in the control bar. A fallback floated over the video would put
+    // a click target on the picture; the observer mounts it once the bar exists.
     const host = this.player.querySelector(".ytp-right-controls");
-    this.button.classList.toggle("trf-player-toggle--floating", !host);
-    if (this.button.parentElement !== (host ?? this.player))
-      (host ?? this.player).prepend(this.button);
+    if (host && this.button.parentElement !== host) host.prepend(this.button);
   }
 
   apply(enabled: boolean): void {
