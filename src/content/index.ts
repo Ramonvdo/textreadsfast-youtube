@@ -23,6 +23,7 @@ import {
 import { ReaderOverlay } from "./overlay";
 import { buildLines, lineAt, readsWholeLine, type Line } from "./lines";
 import { adAction, isAdShowing } from "./ads";
+import { PlayerToggle } from "./playerToggle";
 import {
   forgetWatchData,
   isReadModeOpen,
@@ -66,6 +67,9 @@ let currentVideoId: string | null = null;
 let adShowing = false;
 let adWatcher: { player: HTMLElement; observer: MutationObserver } | null =
   null;
+/** The on/off switch in YouTube's control bar. It outlives sessions, because
+ *  it is also how the viewer turns a stopped reader back on. */
+let playerToggle: PlayerToggle | null = null;
 /**
  * Read Mode is showing and the viewer asked for no word stream there.
  *
@@ -496,6 +500,9 @@ function onNavigate(): void {
   tracks = [];
   pendingBodies = [];
   forgetWatchData();
+  // Off /watch there is nothing to switch; on a new video `awaitPlayer` remounts.
+  playerToggle?.destroy();
+  playerToggle = null;
 
   // Read Mode needs its own handling here. Leaving /watch has to close it, and
   // a new video has to rebuild it — neither of which the reader session's own
@@ -523,6 +530,7 @@ function awaitPlayer(): void {
   const tick = (): void => {
     const found = findPlayer();
     if (found) {
+      mountToggle(found.player);
       watchAds(found.player);
       void start();
       return;
@@ -530,6 +538,23 @@ function awaitPlayer(): void {
     if (++tries < 40) window.setTimeout(tick, 250);
   };
   tick();
+}
+
+/**
+ * Put the on/off switch in this player's control bar, once per player element.
+ *
+ * It flips the same `enabled` the popup does, so the two can never disagree:
+ * the storage write comes back through `onSettingsChanged`, which tears down or
+ * starts the reader and repaints the switch.
+ */
+function mountToggle(player: HTMLElement): void {
+  if (playerToggle?.player !== player) {
+    playerToggle?.destroy();
+    playerToggle = new PlayerToggle(player, () => {
+      void saveSettings({ enabled: !settings.enabled });
+    });
+  }
+  playerToggle.apply(settings.enabled);
 }
 
 /* ── read mode ──────────────────────────────────────────────────────────── */
@@ -643,6 +668,7 @@ async function init(): Promise<void> {
   onSettingsChanged((next) => {
     const previous = settings;
     settings = next;
+    playerToggle?.apply(next.enabled);
 
     if (!next.enabled) {
       teardown();
